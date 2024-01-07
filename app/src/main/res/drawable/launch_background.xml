@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <vector
+            android:height="100dp"
+            android:width="100dp"
+            android:viewportHeight="24"
+            android:viewportWidth="24">
+            <path
+                android:fillColor="@color/MainTwo"
+                android:pathData="M0,0h24v24H0z" />
+        </vector>
+    </item>
+    <item
+        android:drawable="@drawable/loadingscreenicon"
+        android:gravity="center"
+        android:width="100.dp"
+        android:height="100.dp" />
+</layer-list>
