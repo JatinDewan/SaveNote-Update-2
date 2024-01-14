@@ -14,7 +14,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.SavedStateHandleSaveableApi
 import androidx.lifecycle.viewmodel.compose.saveable
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,9 +66,9 @@ class ChecklistViewModel (
         }
     }
 
-    fun completedNote(completedNote: Boolean) {
+    private fun completedNote() {
         viewModelScope.launch{
-            _uiState.update { currentState -> currentState.copy(completedNotes = completedNote) }
+            _uiState.update { currentState -> currentState.copy(completedNotes = false) }
         }
     }
 
@@ -117,7 +116,7 @@ class ChecklistViewModel (
     }
 
     fun reArrange(reArrange: Boolean) {
-        viewModelScope.launch(Dispatchers.IO){
+        viewModelScope.launch{
             _uiState.update { currentState -> currentState.copy(reArrange = reArrange) }
         }
     }
@@ -150,7 +149,7 @@ class ChecklistViewModel (
     fun checklistCompletedTask(checkList: CheckList) {
         viewModelScope.launch{
             temporaryChecklist[temporaryChecklist.indexOf(checkList)] = CheckList(checkList.note, 0, checkList.key)
-            if(checklistCheckedUpdater().isEmpty()) completedNote(false)
+            if(checklistCheckedUpdater().isEmpty()) completedNote()
         }
     }
 
@@ -230,20 +229,7 @@ class ChecklistViewModel (
     }
 
     fun createBlankChecklist() {
-        viewModelScope.launch{
-            primaryViewModel.insertNote{
-            }
-
-//            primaryViewModel.notesRepositoryImp.getNote().collect {
-//                if (it.isNotEmpty()) {
-//                    if (
-//                        it.last().note.isNullOrEmpty() &&
-//                        it.last().header.isNullOrEmpty() &&
-//                        it.last().checkList.isNullOrEmpty()
-//                    ) primaryViewModel.getNote { note -> note.last() }
-//                }
-//            }
-        }
+        primaryViewModel.insertNote { note -> navigateToChecklist(note) }
     }
 
     private fun editOrDeleteChecklist(){
@@ -288,9 +274,7 @@ class ChecklistViewModel (
             openNewChecklist()
             clearValuesChecklist()
             delay(400)
-            println("HI")
             createBlankChecklist()
-            println("HI2")
             primaryViewModel.newEntryButton()
         }
     }
@@ -340,7 +324,7 @@ class ChecklistViewModel (
 
 
     fun returnAndSaveChecklist(closeScreen:()-> Unit){
-        completedNote(false)
+        completedNote()
         reArrange(false)
         viewModelScope.launch {
             editOrDeleteChecklist()

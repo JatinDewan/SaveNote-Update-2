@@ -53,6 +53,7 @@ class PrimaryViewModel(
 
     init {
         updateList()
+        isReady = true
     }
 
     private fun updateState(primaryUiStates: (PrimaryUiState) -> PrimaryUiState) {
@@ -315,34 +316,27 @@ class PrimaryViewModel(
     }
 
     private fun updateList() {
-        viewModelScope.launch(Dispatchers.IO) {
-            notesRepositoryImp.getNote().collect { note ->
-                notesRepositoryImp.deleteSelected(
-                    note.filter { entry ->
-                        entry.note.isNullOrEmpty() &&
-                        entry.checkList.isNullOrEmpty() &&
-                        entry.header.isNullOrEmpty()
+        viewModelScope.launch{
+            viewModelScope.launch(Dispatchers.IO) {
+                notesRepositoryImp.getNote().collect { note ->
+                    updateState {
+                        it.copy(
+                            allEntries = note.filter { entry -> entry.category == null },
+                            favoriteEntries = note.filter { entry -> entry.category != null }
+                        )
                     }
-                )
-                updateState {
-                    it.copy(
-                        allEntries = note.filter { entry -> entry.category == null },
-                        favoriteEntries = note.filter { entry -> entry.category != null }
-                    )
+                }
+            }
+
+            viewModelScope.launch(Dispatchers.IO) {
+                sharedPref.getLayoutInformation.collect { currentPage ->
+                    updateState { it.copy(currentPage = currentPage) }
+                }
+                sharedPref.getSortByView.collect { view ->
+                    updateState { it.copy(sortByView = view) }
                 }
             }
         }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            sharedPref.getLayoutInformation.collect{
-                currentPage -> updateState { it.copy(currentPage = currentPage) }
-            }
-            sharedPref.getSortByView.collect{
-                view -> updateState { it.copy(sortByView = view) }
-            }
-        }
-
-        isReady = true
     }
 
 //    fun backupNotes(context: Context){
