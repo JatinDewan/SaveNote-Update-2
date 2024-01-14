@@ -1,7 +1,8 @@
 package note.notes.savenote.ViewModelClasses
 
-import note.notes.savenote.Database.Note
-
+import androidx.compose.runtime.Immutable
+import note.notes.savenote.Database.roomDatabase.Note
+@Immutable
 data class ChecklistUiState (
     val fullChecklist: Note? = null,
     val uid: Int = 0,

@@ -1,9 +1,10 @@
 package note.notes.savenote.Utils
 
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material.MaterialTheme.colors
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -15,10 +16,11 @@ fun HighlightedText(
     text: String,
     selectedString: String,
     maxLines: Int,
-    fontSize: TextUnit
+    fontSize: TextUnit,
+    colour: Color = colors.primaryVariant
 ) {
 
-    val color = MaterialTheme.colors.primary.copy(0.4f)
+    val color = colors.primary.copy(0.4f)
 
     val annotatedText = remember(text, selectedString) {
         AnnotatedString.Builder(text).apply {
@@ -39,7 +41,7 @@ fun HighlightedText(
     Text(
         text = annotatedText,
         fontSize = fontSize,
-        color = MaterialTheme.colors.onSecondary,
+        color = colour,
         fontFamily = UniversalFamily,
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis

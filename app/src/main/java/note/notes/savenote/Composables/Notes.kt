@@ -1,9 +1,7 @@
 package note.notes.savenote.Composables
 
 import android.content.Context
-import android.os.Build
 import androidx.activity.compose.BackHandler
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,7 +13,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -30,7 +27,6 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -46,7 +42,6 @@ import note.notes.savenote.R
 import note.notes.savenote.Utils.Keyboard
 import note.notes.savenote.Utils.observeAsState
 import note.notes.savenote.ViewModelClasses.NotesViewModel
-import note.notes.savenote.ui.theme.UniversalFamily
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -65,6 +60,7 @@ fun NoteComposer(
     val stateLifecycle by lifecycleOwner.lifecycle.observeAsState()
     var keyboardRefocusState:Keyboard? by rememberSaveable { mutableStateOf(null) }
 
+    BackHandler(onBack = { notesViewModel.returnAndSaveNote(closeScreen::invoke)})
     if(keyboard.value == Keyboard.Closed) {
         LaunchedEffect(Unit) {
             focusManager.clearFocus()
@@ -145,6 +141,5 @@ fun NoteComposer(
                 }
             )
         }
-        BackHandler(onBack = { notesViewModel.returnAndSaveNote(closeScreen::invoke)})
     }
 }

@@ -1,16 +1,13 @@
 package note.notes.savenote.Utils
 
 //import android.graphics.Color
-import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.view.ViewTreeObserver
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 
 enum class Keyboard {
@@ -40,10 +37,4 @@ internal fun keyboardAsState(): State<Keyboard> {
         }
     }
     return keyboardState
-}
-
-@SuppressLint("UnrememberedMutableState")
-@Composable
-internal fun safeColourSelection(condition: Boolean, c1: Color, c2: Color): State<Color> {
-    return derivedStateOf { if(condition) c1 else c2 }
 }

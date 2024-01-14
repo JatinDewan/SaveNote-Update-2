@@ -3,7 +3,6 @@ package note.notes.savenote.Composables
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.EaseInExpo
-import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -42,55 +41,46 @@ fun MainComposable(
     val primaryUiState by primaryViewModel.uiState.collectAsState()
     val notesUiState by notesViewModel.uiState.collectAsState()
     val checklistUiState by checklistViewModel.uiState.collectAsState()
-    val gridState = rememberForeverLazyListState(key = "grid")
-    val gridStateObserver by remember { derivedStateOf { gridState.firstVisibleItemIndex > 1 } }
-    val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     val focusRequester = FocusRequester()
     val keyboard = keyboardAsState()
-    val date = DateUtils()
     val context = LocalContext.current
-    val collapsableNavigationBar by remember { derivedStateOf { -primaryUiState.barOffsetY.roundToInt() } }
+    val collapsableNavigationBar by remember {
+        derivedStateOf { IntOffset(x = 0, y = -primaryUiState.barOffsetY.roundToInt()) }
+    }
     val listView by remember {
         derivedStateOf { primaryUiState.allEntries.sortedWith(primaryViewModel.compareLastEdit()) }
     }
 
-    LaunchedEffect(primaryViewModel.isReady){
-        delay(500)
-        loaded()
-    }
+    LaunchedEffect(primaryViewModel.isReady) { loaded() }
 
     BoxWithConstraints {
+        val pageAnimationIn = slideInVertically(
+            animationSpec =  tween(durationMillis = 300, easing = EaseIn),
+            initialOffsetY = { initialOffset -> initialOffset }
+        )
+        val pageAnimationOut = slideOutVertically(
+            animationSpec = tween(durationMillis = 200, easing = EaseInExpo),
+            targetOffsetY = { targetOffset -> +targetOffset }
+        )
+
         AllNotesView(
             primaryViewModel = primaryViewModel,
             notesViewModel = notesViewModel,
             allEntries = listView,
             favoriteEntries = primaryUiState.favoriteEntries,
-            date = date,
             checklistViewModel = checklistViewModel,
-            keyboardController = keyboardController!!,
             focusRequester = focusRequester,
             context = context,
             focusManager = focusManager,
-            navigateNewNote = { notesViewModel.navigateNewNote() },
-            navigateNewChecklist = { checklistViewModel.navigateNewChecklist() },
-            offset = IntOffset(x = 0, y = collapsableNavigationBar),
-            gridState = gridState,
-            nestedScrollConnection = primaryViewModel.collapsingBarConnection(gridStateObserver),
-            gridStateObserver = gridStateObserver
+            offset = collapsableNavigationBar
         )
 
         AnimatedVisibility(
             visible = checklistUiState.navigateNewChecklist,
-            enter = slideInVertically(
-                animationSpec =  tween(durationMillis = 300, easing = EaseIn),
-                initialOffsetY = { initialOffset -> initialOffset }
-            ),
-            exit = slideOutVertically(
-                animationSpec = tween(durationMillis = 200, easing = EaseInExpo),
-                targetOffsetY = { targetOffset -> +targetOffset }
-            ),
+            enter = pageAnimationIn,
+            exit = pageAnimationOut,
             content = {
                 ChecklistComposer(
                     coroutineScope = scope,
@@ -99,21 +89,15 @@ fun MainComposable(
                     focusRequester = focusRequester,
                     keyboard = keyboard,
                     context = context,
-                    closeScreen = { checklistViewModel.openNewChecklist(false) }
+//                    closeScreen = { checklistViewModel.openNewChecklist(false) }
                 )
             }
         )
 
         AnimatedVisibility(
             visible = notesUiState.navigateNewNote,
-            enter = slideInVertically(
-                animationSpec = tween(durationMillis = 300, easing = EaseIn),
-                initialOffsetY = { initialOffset -> initialOffset }
-            ),
-            exit = slideOutVertically(
-                animationSpec = tween(durationMillis = 200, easing = EaseInExpo),
-                targetOffsetY = { targetOffset -> +targetOffset }
-            ),
+            enter = pageAnimationIn,
+            exit = pageAnimationOut,
             content = {
                 NoteComposer(
                     notesViewModel = notesViewModel,
@@ -127,5 +111,4 @@ fun MainComposable(
             }
         )
     }
-
 }

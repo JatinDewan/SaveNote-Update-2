@@ -19,46 +19,45 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import note.notes.savenote.R
-import note.notes.savenote.Utils.safeColourSelection
 import note.notes.savenote.ViewModelClasses.PrimaryViewModel
 
 @Composable
 fun MoreOptionsChecklist(
     dismiss: Boolean,
+    canReArrange: Boolean,
+    showCompletedBoolean: Boolean,
     share:() -> Unit,
     reArrange:() -> Unit,
     unCheckCompleted:() -> Unit,
     confirmDelete:() -> Unit,
     expandedIsFalse:() -> Unit,
     showCompleted:() -> Unit,
-    showCompletedBoolean: Boolean,
-    canReArrange: Boolean,
     modifier: Modifier = Modifier
 ) {
-    var confirm by remember { mutableStateOf(false) }
+    var confirmDeleteMessage by remember { mutableStateOf(false) }
     val defaultTextBackgroundColour = colors.onBackground
 
     val showCompletedBackgroundColour: Color by animateColorAsState(
-        targetValue = safeColourSelection(condition = showCompletedBoolean, c1 = colors.primary, c2 = colors.onSecondary).value,
-        animationSpec = tween(200),
+        targetValue = if(showCompletedBoolean) colors.primary else colors.onSecondary,
+        animationSpec = tween(150),
         label = ""
     )
 
     val reArrangeBackgroundColour: Color by animateColorAsState(
-        targetValue = safeColourSelection(condition = canReArrange, c1 = colors.primary, c2 = colors.onSecondary).value,
+        targetValue = if(canReArrange) colors.primary else colors.onSecondary,
         animationSpec = tween(200),
         label = ""
     )
 
     val confirmDeleteColour: Color by animateColorAsState(
         animationSpec = tween(durationMillis = 200, delayMillis = 200),
-        targetValue = safeColourSelection(condition = confirm, c1 = colors.onError, c2 = defaultTextBackgroundColour).value,
+        targetValue = if(confirmDeleteMessage) colors.onError else defaultTextBackgroundColour,
         label = ""
     )
 
     val confirmDeleteColourIcon: Color by animateColorAsState(
         animationSpec = tween(durationMillis = 200, delayMillis = 200),
-        targetValue = safeColourSelection(condition = confirm, c1 = colors.onError, c2 = colors.onSecondary).value,
+        targetValue = if(confirmDeleteMessage) colors.onError else colors.onSecondary,
         label = ""
     )
 
@@ -66,7 +65,7 @@ fun MoreOptionsChecklist(
         modifier = modifier.padding(4.dp),
         dismiss = dismiss,
         expandedIsFalse = expandedIsFalse::invoke,
-        additionalDismissFunction = { confirm = false },
+        additionalDismissFunction = { confirmDeleteMessage = false },
         menu = {
             Column(
                 horizontalAlignment = Alignment.End,
@@ -123,8 +122,8 @@ fun MoreOptionsChecklist(
 
                 ButtonEntries(
                     textBoxModifier = Modifier.animateContentSize(),
-                    buttonFunction = { confirm = if(!confirm) true else { confirmDelete(); false } },
-                    entryLabel = if (!confirm) R.string.DeleteChecked else R.string.TapToConfirm,
+                    buttonFunction = { confirmDeleteMessage = if(!confirmDeleteMessage) true else { confirmDelete(); false } },
+                    entryLabel = if (!confirmDeleteMessage) R.string.DeleteChecked else R.string.TapToConfirm,
                     entryIcon = R.drawable.trash_02,
                     dismiss = dismiss,
                     animationDelay = 300,

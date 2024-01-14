@@ -37,9 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import note.notes.savenote.Database.Note
+import note.notes.savenote.Database.roomDatabase.Note
 import note.notes.savenote.R
-import note.notes.savenote.Utils.DateUtils
 import note.notes.savenote.Utils.HighlightedText
 import note.notes.savenote.Utils.rangeFinder
 import note.notes.savenote.ViewModelClasses.PrimaryUiState
@@ -54,7 +53,6 @@ fun EntryCards(
     onEditClick: () -> Unit,
     onLongPress: () -> Unit,
     note: Note,
-    date: DateUtils,
     isSearchQuery: Boolean = false,
 ) {
     val selected = primaryViewModel.temporaryEntryHold.contains(note)
@@ -115,7 +113,11 @@ fun EntryCards(
 
             Divider(color = colors.onBackground)
 
-            AdditionalInformation(note = note, date = date, dateColour = dateColour)
+            AdditionalInformation(
+                note = note,
+                dateColour = dateColour,
+                currentDate = { primaryViewModel.dateAndTimeDisplay(it) }
+            )
         }
     }
 }
@@ -134,7 +136,7 @@ fun HeaderDisplay(
                     text = it,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    color = colors.primaryVariant,
+                    color = colors.onSecondary,
                     fontFamily = UniversalFamily,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -167,7 +169,7 @@ fun NoteDisplay(
                 Text(
                     text = it,
                     fontSize = 12.sp,
-                    color = colors.onSecondary,
+                    color = colors.primaryVariant,
                     fontFamily = UniversalFamily,
                     maxLines = 10,
                     overflow = TextOverflow.Ellipsis
@@ -180,6 +182,7 @@ fun NoteDisplay(
                 HighlightedText(
                     text = it,
                     selectedString = primaryViewModel.searchQuery,
+
                     maxLines = 10,
                     fontSize = 12.sp
                 )
@@ -195,40 +198,41 @@ fun CheckListDisplay(
     primaryViewModel: PrimaryUiState
 ) {
     val checklistDisplay by remember { derivedStateOf { note.checkList?.rangeFinder(5) } }
+    Column(
+        verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        checklistDisplay?.forEach { checklistEntries ->
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Icon(
+                    modifier = Modifier.size(14.dp),
+                    tint = colors.primary,
+                    painter = painterResource(id = R.drawable.circle),
+                    contentDescription = stringResource(R.string.Check)
+                )
 
-   checklistDisplay?.forEach { checklistEntries ->
-        Row(
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            Icon(
-                modifier = Modifier
-                    .padding(top = 2.dp)
-                    .size(12.dp),
-                tint = colors.primary.copy(0.85f),
-                painter = painterResource(id = R.drawable.circle),
-                contentDescription = stringResource(R.string.Check)
-            )
+                when(isSearchQuery) {
+                    true -> {
+                        HighlightedText(
+                            text = checklistEntries.note,
+                            selectedString = primaryViewModel.searchQuery,
+                            maxLines = 3,
+                            fontSize = 12.sp
+                        )
+                    }
 
-            when(isSearchQuery) {
-                true -> {
-                    HighlightedText(
-                        text = checklistEntries.note,
-                        selectedString = primaryViewModel.searchQuery,
-                        maxLines = 3,
-                        fontSize = 12.sp
-                    )
-                }
-
-                else -> {
-                    Text(
-                        text = checklistEntries.note,
-                        color = colors.onSecondary,
-                        fontFamily = UniversalFamily,
-                        maxLines = 3,
-                        fontSize = 12.sp,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    else -> {
+                        Text(
+                            text = checklistEntries.note,
+                            color = colors.primaryVariant,
+                            fontFamily = UniversalFamily,
+                            maxLines = 3,
+                            fontSize = 12.sp,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
@@ -238,8 +242,8 @@ fun CheckListDisplay(
 @Composable
 fun AdditionalInformation(
     note: Note,
-    date: DateUtils,
-    dateColour: Color
+    dateColour: Color,
+    currentDate: (String) -> String
 ){
     Row(
         modifier = Modifier.fillMaxWidth()
@@ -257,7 +261,7 @@ fun AdditionalInformation(
         ) {
             note.date?.let {
                 Text(
-                    text = date.dateTimeDisplay(it),
+                    text = currentDate(it),
                     fontSize = 10.sp,
                     color = dateColour,
                     fontWeight = FontWeight.SemiBold,
@@ -275,7 +279,7 @@ fun AdditionalInformation(
                     modifier = Modifier.size(12.dp),
                     painter = painterResource(id = R.drawable.pin_01),
                     contentDescription = stringResource(R.string.Check),
-                    tint = colors.primary.copy(0.8f)
+                    tint = colors.onSecondary
                 )
             }
         }

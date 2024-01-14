@@ -42,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import note.notes.savenote.R
-import note.notes.savenote.Utils.safeColourSelection
 import note.notes.savenote.ViewModelClasses.PrimaryViewModel
 import note.notes.savenote.ui.theme.UniversalFamily
 
@@ -54,7 +53,7 @@ fun BottomPopUpBar(
     val checkContains by remember { derivedStateOf { primaryViewModel.temporaryEntryHold.containsAll(primaryView.allEntries + primaryView.favoriteEntries) } }
 
     val selectAllIndicator: Color by animateColorAsState(
-        targetValue = safeColourSelection(condition = checkContains, c1 = colors.primary, c2 = colors.onSecondary).value,
+        targetValue = if(checkContains) colors.primary else colors.onSecondary,
         animationSpec = tween(150),
         label = ""
     )

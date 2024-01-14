@@ -1,4 +1,4 @@
-package note.notes.savenote.Database
+package note.notes.savenote.Database.roomDatabase
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -17,8 +17,9 @@ interface NoteDao {
 
     @Insert
     suspend fun insertGroup(items: List<Note>)
-    @Delete
-    suspend fun delete(note: Note)
+
+    @Query("DELETE FROM note WHERE uid = :uid")
+    fun delete(uid: Int?)
 
     @Update
     suspend fun editNote (note: Note)

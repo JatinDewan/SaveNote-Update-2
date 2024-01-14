@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.sp
 import note.notes.savenote.Composables.Components.CustomTextField
 import note.notes.savenote.Composables.Components.TextFieldPlaceHolder
 import note.notes.savenote.R
-import note.notes.savenote.Utils.safeColourSelection
 import note.notes.savenote.ViewModelClasses.PrimaryUiState
 import note.notes.savenote.ViewModelClasses.PrimaryViewModel
 import note.notes.savenote.ui.theme.UniversalFamily
@@ -54,24 +53,25 @@ import note.notes.savenote.ui.theme.UniversalFamily
 @Composable
 fun TopNavigationBarHome(
     startedScrolling: Boolean,
+    animateBarOffset: Boolean,
+    isMenuOpen: Boolean,
     startSearch:() -> Unit,
     endSearch:() -> Unit,
-    primaryViewModel: PrimaryViewModel,
-    focusRequester: FocusRequester,
     moreOptions: () -> Unit,
     changeView: () -> Unit,
     offset: IntOffset,
-    animateBarOffset: Boolean
+    focusRequester: FocusRequester,
+    primaryViewModel: PrimaryViewModel
 ) {
     val primaryUiState by primaryViewModel._uiState.collectAsState()
     val barAnimation by animateIntOffsetAsState(targetValue = offset, label = "")
     val animateDividerColour by animateColorAsState(
-        targetValue = safeColourSelection(condition = startedScrolling, c1 = colors.onBackground, c2 = colors.background).value,
+        targetValue = if(startedScrolling || isMenuOpen) colors.onBackground else colors.background,
         animationSpec = tween(150),
         label = ""
     )
     val optionsOpenColor: Color by animateColorAsState(
-        targetValue = safeColourSelection(condition = primaryUiState.dropDown, c1 = colors.onSecondary, c2 = colors.primary).value,
+        targetValue = if(primaryUiState.dropDown) colors.onSecondary else colors.primary,
         animationSpec = tween(150),
         label = ""
     )

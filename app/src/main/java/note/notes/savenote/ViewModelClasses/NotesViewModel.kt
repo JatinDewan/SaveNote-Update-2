@@ -14,13 +14,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import note.notes.savenote.Database.Note
+import note.notes.savenote.Database.roomDatabase.Note
 import note.notes.savenote.Utils.CheckStringUtil
-import note.notes.savenote.Utils.DateUtils
 
 class NotesViewModel(
     private val primaryViewModel: PrimaryViewModel,
-    private val date: DateUtils = DateUtils(),
     savedStateHandle: SavedStateHandle = SavedStateHandle()
 ) : ViewModel() {
 
@@ -108,30 +106,11 @@ class NotesViewModel(
         }
     }
 
-    fun createBlankNote() {
+    private fun createBlankNote() {
         viewModelScope.launch{
-            primaryViewModel.notesRepositoryImp.insertNote(
-                Note(
-                    uid = null,
-                    header =null,
-                    note = null,
-                    date = date.current,
-                    checkList = null,
-                    category = null
-                )
+            primaryViewModel.insertNote(
+                navigateToNote = { navigateToNote(it) }
             )
-
-            primaryViewModel.notesRepositoryImp.getNote().collect { note ->
-                if(note.isNotEmpty()) {
-                    if(
-                        note.last().note.isNullOrEmpty() &&
-                        note.last().header.isNullOrEmpty() &&
-                        note.last().checkList.isNullOrEmpty()
-                    ){
-                        navigateToNote(note.last())
-                    }
-                }
-            }
         }
     }
 
@@ -142,18 +121,12 @@ class NotesViewModel(
             uiState.value.fullNote?.note != noteEntry.text && noteEntry.text.isNotEmpty()
 
         if(headerCheck || noteCheck) {
-            viewModelScope.launch {
-                primaryViewModel.notesRepositoryImp.editNote(
-                    Note(
-                        uiState.value.uid,
-                        checkStringUtil.checkString(uiState.value.header),
-                        checkStringUtil.checkString(noteEntry.text),
-                        DateUtils().current,
-                        null,
-                        uiState.value.category
-                    )
-                )
-            }
+            primaryViewModel.editNote(
+                uid = uiState.value.uid,
+                header = checkStringUtil.checkString(uiState.value.header),
+                note = checkStringUtil.checkString(noteEntry.text),
+                category = uiState.value.category
+            )
         }
     }
     @OptIn(SavedStateHandleSaveableApi::class)
@@ -166,34 +139,18 @@ class NotesViewModel(
     private fun editOrDeleteNote() {
         val headerCheck = uiState.value.fullNote?.header != checkStringUtil.checkString(uiState.value.header)
         val noteCheck = uiState.value.fullNote?.note != checkStringUtil.checkString(noteEntry.text)
-        viewModelScope.launch{
-            when {
-                uiState.value.header.isEmpty() && noteEntry.text.isEmpty() -> {
-                    primaryViewModel.notesRepositoryImp.deleteNote(
-                        Note(
-                            uid = uiState.value.uid,
-                            header = null,
-                            note = null,
-                            date = null,
-                            checkList = null,
-                            category = null
+        when {
+            uiState.value.header.isEmpty() && noteEntry.text.isEmpty() -> {
+                primaryViewModel.deleteNote(uiState.value.uid)
+            }
 
-                        )
-                    )
-                }
-
-                headerCheck || noteCheck -> {
-                    primaryViewModel.notesRepositoryImp.editNote(
-                        Note(
-                            uiState.value.uid,
-                            checkStringUtil.checkString(uiState.value.header),
-                            checkStringUtil.checkString(noteEntry.text),
-                            DateUtils().current,
-                            null,
-                            uiState.value.category
-                        )
-                    )
-                }
+            headerCheck || noteCheck -> {
+                primaryViewModel.editNote(
+                    uid = uiState.value.uid,
+                    header = checkStringUtil.checkString(uiState.value.header),
+                    note = checkStringUtil.checkString(noteEntry.text),
+                    category = uiState.value.category
+                )
             }
         }
     }

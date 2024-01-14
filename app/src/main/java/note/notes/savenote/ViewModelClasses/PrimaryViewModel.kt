@@ -25,23 +25,24 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import note.notes.savenote.Database.NewArrayConverter
-import note.notes.savenote.Database.Note
-import note.notes.savenote.Database.NotesRepositoryImp
-import note.notes.savenote.Database.SharedPref
+import note.notes.savenote.Database.roomDatabase.CheckList
+import note.notes.savenote.Database.roomDatabase.NewArrayConverter
+import note.notes.savenote.Database.roomDatabase.Note
+import note.notes.savenote.Database.roomDatabase.NotesRepositoryImp
+import note.notes.savenote.Database.sharedPreferences.ISharedPreferences
 import note.notes.savenote.R
 import note.notes.savenote.SaveNoteApplication
+import note.notes.savenote.Utils.DateFormatter
+import note.notes.savenote.Utils.DateUtilities
 import note.notes.savenote.Utils.DateUtils
 import java.text.SimpleDateFormat
 import java.util.Locale
-
 class PrimaryViewModel(
     val notesRepositoryImp: NotesRepositoryImp,
-    val sharedPref: SharedPref,
-    val date: DateUtils = DateUtils()
+    val sharedPref: ISharedPreferences,
+    private val dateUtils: DateUtilities
 ): ViewModel() {
 
     val _uiState = MutableStateFlow(PrimaryUiState())
@@ -51,81 +52,119 @@ class PrimaryViewModel(
     var isReady = false
 
     init {
-//        notesRepositoryImp
-        initialiseRepository()
         updateList()
-        updateSortByView()
-        updatePage()
-        deleteAllEmpty()
-        isReady = true
     }
 
-    private fun showSearchBar(show: Boolean) = _uiState.update { currentState -> currentState.copy(showSearchBar = show) }
+    private fun updateState(primaryUiStates: (PrimaryUiState) -> PrimaryUiState) {
+        viewModelScope.launch{ _uiState.update { updateParameter -> primaryUiStates(updateParameter) } }
+    }
+    private fun showSearchBar(show: Boolean) = updateState { it.copy(showSearchBar = show) }
+
+    fun confirmDelete(confirmDelete: Boolean) = updateState { it.copy(confirmDelete = confirmDelete) }
+
+    fun newEntryButton(collapse: Boolean = false) = updateState { it.copy(newEntryButton = collapse) }
+
+    fun dropDown(dropDown: Boolean) = updateState { it.copy(dropDown = dropDown) }
+
+    fun animateTopBarVisibility(animate: Boolean) = updateState { it.copy(animateCloseBar = animate) }
+
+    fun nestedScrollOffset(offSet: Float) = updateState { it.copy(barOffsetY = offSet) }
+
+    fun dateAndTimeDisplay(dateAndTime: String): String = dateUtils.formatDateAndTime(dateAndTime)
+
+    private fun currentDateAndTime(): String = dateUtils.getCurrentDateAndTime()
+
+    fun showBackup(showBackup: Boolean){
+        dropDown(false)
+        updateState { it.copy(showBackup = showBackup) }
+    }
+
+    fun insertNote(
+        navigateToNote:(Note) -> Unit
+    ){
+        val emptyNote = Note(
+            uid = null,
+            header = null,
+            note = null,
+            date = dateUtils.getCurrentDateAndTime(),
+            checkList = null,
+            category = null
+        )
+        viewModelScope.launch(Dispatchers.IO){
+            notesRepositoryImp.insertNote(emptyNote)
+
+            notesRepositoryImp.getNote().collect {
+                if(it.isNotEmpty()) {
+                    if(
+                        it.last().note.isNullOrEmpty() &&
+                        it.last().header.isNullOrEmpty() &&
+                        it.last().checkList.isNullOrEmpty()
+                    )   navigateToNote(it.last())
+                }
+            }
+        }
+
+//        viewModelScope.launch {
+//            notesRepositoryImp.getNote().collect {
+//                if(it.isNotEmpty()) {
+//                    if(
+//                        it.last().note.isNullOrEmpty() &&
+//                        it.last().header.isNullOrEmpty() &&
+//                        it.last().checkList.isNullOrEmpty()
+//                    )   navigateToNote(it.last())
+//                }
+//            }
+//        }
+    }
+
+    fun getNote(note:(List<Note>) -> Unit){
+        viewModelScope.launch{
+            notesRepositoryImp.getNote().collect { currentNote -> note(currentNote) }
+        }
+    }
+
+    fun editNote(
+        uid: Int,
+        header: String?,
+        note: String? = null,
+        checklist: ArrayList<CheckList>? = null,
+        category: String?
+
+    ) {
+        viewModelScope.launch(Dispatchers.IO){
+            notesRepositoryImp.editNote(
+                Note(
+                    uid = uid,
+                    header = header,
+                    note = note,
+                    checkList = checklist,
+                    date = currentDateAndTime(),
+                    category = category
+                )
+            )
+        }
+    }
+
+    fun deleteNote(uid: Int?){
+        viewModelScope.launch(Dispatchers.IO){ notesRepositoryImp.deleteNote(uid) }
+    }
 
     fun containerSize():String = if(temporaryEntryHold.size > 99) "99+" else temporaryEntryHold.size.toString()
-
-    private fun initialiseRepository() {
-        viewModelScope.launch(Dispatchers.IO){ notesRepositoryImp }
-    }
-
-    fun showBackup(boolean: Boolean){
-        _uiState.update { currentState -> currentState.copy(showBackup = boolean) }
-    }
-
-    fun dropDown(boolean: Boolean){
-        _uiState.update { currentState -> currentState.copy(dropDown = boolean) }
-    }
-
-    fun showSortBy(boolean: Boolean){
-        _uiState.update { currentState -> currentState.copy(showSortBy = boolean) }
-    }
 
     fun cardFunctionSelection(returnOperationOne:() -> Unit, returnOperationTwo: () -> Unit) {
         viewModelScope.launch{ if (temporaryEntryHold.isEmpty()) returnOperationOne() else returnOperationTwo() }
     }
 
-    fun confirmDelete(confirmDelete: Boolean) {
-        _uiState.update { currentState -> currentState.copy(confirmDelete = confirmDelete) }
-    }
-
     fun searchQuery(query:String) {
-        viewModelScope.launch{
-            _uiState.update { currentState -> currentState.copy(searchQuery = query) }
-            searchNotes()
-        }
+        updateState { it.copy(searchQuery = query) }
+        searchNotes()
     }
 
-    fun newEntryButton(collapse: Boolean = false) {
-        _uiState.update { currentState -> currentState.copy(newEntryButton = collapse) }
-    }
-
-    fun nestedScrollOffset(offSet: Float) {
-        _uiState.update { currentState -> currentState.copy(barOffsetY = offSet) }
-    }
-
-    fun animateTopBarVisibility(animate: Boolean) {
-        _uiState.update { currentState -> currentState.copy(animateCloseBar = animate) }
-    }
-
-    private fun updatePage(){
-        viewModelScope.launch(Dispatchers.IO){
-            sharedPref.getLayout.collect { currentPage ->
-                _uiState.update { currentState -> currentState.copy(currentPage = currentPage) }
-            }
-        }
-    }
-
-    fun updateCurrentPageView(page: Boolean){
-        viewModelScope.launch {
-            sharedPref.saveLayout(page)
-            updatePage()
-        }
-    }
-
-    private fun updateSortByView(){
-        viewModelScope.launch(Dispatchers.IO){
-            sharedPref.getView.collect {
-                _uiState.update { currentState -> currentState.copy(sortByView = it) }
+    fun updateCurrentPageView1(page: Boolean){
+        viewModelScope.launch(Dispatchers.IO) {
+            sharedPref.setLayoutInformation(!page)
+            sharedPref.getLayoutInformation.collect { currentPage ->
+                updateState { it.copy(currentPage = currentPage) }
             }
         }
     }
@@ -160,16 +199,15 @@ class PrimaryViewModel(
     }
 
 //    This will need a loading screen as it may take time and will crash app if not
-    
-    fun duplicateSelectedNotes(){
+    fun duplicateSelectedNotes() {
         viewModelScope.launch{
-            temporaryEntryHold.forEach {
-                note -> notesRepositoryImp.insertNote(
+            temporaryEntryHold.forEach { note ->
+                notesRepositoryImp.insertNote(
                     notes = Note(
                         uid = null,
                         header = note.header,
                         note = note.note,
-                        date = date.current,
+                        date = dateUtils.getCurrentDateAndTime(),
                         checkList = note.checkList,
                         category = note.category
                     )
@@ -196,18 +234,6 @@ class PrimaryViewModel(
         }
     }
 
-    private fun deleteAllEmpty() {
-        viewModelScope.launch {
-            notesRepositoryImp.getNote().onEach { notes ->
-                notes.forEach { entry ->
-                    if (entry.note.isNullOrEmpty() && entry.checkList.isNullOrEmpty() && entry.header.isNullOrEmpty()) {
-                        notesRepositoryImp.deleteNote(entry)
-                    }
-                }
-            }
-        }
-    }
-
     fun deleteTally(note: Note) {
         viewModelScope.launch{
             if (temporaryEntryHold.contains(note)) temporaryEntryHold.remove(note) else temporaryEntryHold.add(note)
@@ -229,10 +255,11 @@ class PrimaryViewModel(
     }
 
     fun updateCurrentPageView(changeView: Int) {
-        val returnNumber: Int = if(changeView > 2) 1 else changeView + 1
-        viewModelScope.launch {
-            sharedPref.saveSortView(returnNumber)
-            updatePage()
+        viewModelScope.launch(Dispatchers.IO) {
+            sharedPref.setSortByView(if(changeView > 2) 1 else changeView + 1)
+            sharedPref.getSortByView.collect{ sortByView ->
+                updateState { view -> view.copy(sortByView = sortByView) }
+            }
         }
     }
 
@@ -245,7 +272,7 @@ class PrimaryViewModel(
     }
 
     fun favouriteSelected(category: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             temporaryEntryHold.forEach { note ->
                 notesRepositoryImp.updateCategory(
                     isCategory(note.category,category),
@@ -267,12 +294,13 @@ class PrimaryViewModel(
     }
 
     private fun searchNotes() {
-        viewModelScope.launch {
-            notesRepositoryImp.getNote().collect {
+        viewModelScope.launch(Dispatchers.IO) {
+            notesRepositoryImp.getNote().collect { notes ->
                 when(uiState.value.searchQuery.isNotEmpty()){
                     true -> {
-                        _uiState.update { update ->
-                            update.copy( searchEntries = it.filter { note ->
+                        updateState {
+                            it.copy(
+                                searchEntries = notes.filter { note ->
                                     note.note?.lowercase()?.contains(uiState.value.searchQuery.lowercase()) == true ||
                                     note.header?.lowercase()?.contains(uiState.value.searchQuery.lowercase()) == true ||
                                     finderChecklist(uiState.value.searchQuery.lowercase(), note)
@@ -280,25 +308,93 @@ class PrimaryViewModel(
                             )
                         }
                     }
-                    else -> _uiState.update { update -> update.copy(searchEntries = emptyList()) }
+                    else -> updateState { it.copy(searchEntries = emptyList()) }
                 }
-
             }
         }
     }
 
     private fun updateList() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             notesRepositoryImp.getNote().collect { note ->
-                _uiState.update { update ->
-                    update.copy(allEntries = note.filter { entry -> entry.category == null })
-                }
-                _uiState.update { update ->
-                    update.copy(favoriteEntries = note.filter { entry -> entry.category != null })
+                notesRepositoryImp.deleteSelected(
+                    note.filter { entry ->
+                        entry.note.isNullOrEmpty() &&
+                        entry.checkList.isNullOrEmpty() &&
+                        entry.header.isNullOrEmpty()
+                    }
+                )
+                updateState {
+                    it.copy(
+                        allEntries = note.filter { entry -> entry.category == null },
+                        favoriteEntries = note.filter { entry -> entry.category != null }
+                    )
                 }
             }
         }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            sharedPref.getLayoutInformation.collect{
+                currentPage -> updateState { it.copy(currentPage = currentPage) }
+            }
+            sharedPref.getSortByView.collect{
+                view -> updateState { it.copy(sortByView = view) }
+            }
+        }
+
+        isReady = true
     }
+
+//    fun backupNotes(context: Context){
+//        val appDatabase = NoteDatabase.getDatabase(context = context)
+//        appDatabase.
+//
+//    }
+
+//    fun backupDatabase(context: Context) {
+//        val appDatabase: NoteDatabase = NoteDatabase.getDatabase(context)
+//        appDatabase.close()
+//        val dbfile = context.getDatabasePath("DATABASE_NAME")
+//        val sddir = File()
+//        val sdir: File = File(getFilePath(context, 0), "backup")
+//        val fileName: String = FILE_NAME + getDateFromMillisForBackup(System.currentTimeMillis())
+//        val sfpath = sdir.path + File.separator + fileName
+//        if (!sdir.exists()) {
+//            sdir.mkdirs()
+//        } else {
+//            //Directory Exists. Delete a file if count is 5 already. Because we will be creating a new.
+//            //This will create a conflict if the last backup file was also on the same date. In that case,
+//            //we will reduce it to 4 with the function call but the below code will again delete one more file.
+//            checkAndDeleteBackupFile(sdir, sfpath)
+//        }
+//        val savefile = File(sfpath)
+//        if (savefile.exists()) {
+//            Log.d(LOGGER, "File exists. Deleting it and then creating new file.")
+//            savefile.delete()
+//        }
+//        try {
+//            if (savefile.createNewFile()) {
+//                val buffersize = 8 * 1024
+//                val buffer = ByteArray(buffersize)
+//                var bytes_read = buffersize
+//                val savedb: OutputStream = FileOutputStream(sfpath)
+//                val indb: InputStream = FileInputStream(dbfile)
+//                while (indb.read(buffer, 0, buffersize).also { bytes_read = it } > 0) {
+//                    savedb.write(buffer, 0, bytes_read)
+//                }
+//                savedb.flush()
+//                indb.close()
+//                savedb.close()
+//                val sharedPreferences = context.getSharedPreferences(SHAREDPREF, MODE_PRIVATE)
+//                sharedPreferences.edit().putString("backupFileName", fileName).apply()
+//                updateLastBackupTime(sharedPreferences)
+//            }
+//        } catch (e: java.lang.Exception) {
+//            e.printStackTrace()
+//            Log.d(LOGGER, "ex: $e")
+//        }
+//    }
+
 
     fun backUpNotes(uri: Uri?, context: Context){
         val collectList = (uiState.value.allEntries + uiState.value.favoriteEntries)
@@ -332,15 +428,15 @@ class PrimaryViewModel(
                     openReader.split("****CustomListSplitMethod****").drop(1).forEach { entries ->
                         val note = NewArrayConverter().toString(entries)
                         if (note !in uiState.value.allEntries + uiState.value.favoriteEntries) {
-                            if (!note.note.isNullOrEmpty() || !note.checkList.isNullOrEmpty()) {
+                            if (!note?.note.isNullOrEmpty() || !note?.checkList.isNullOrEmpty()) {
                                 temporaryList.add(
                                     Note(
                                         uid = null,
-                                        header = note.header,
-                                        note = note.note,
-                                        date = note.date,
-                                        checkList = note.checkList,
-                                        category = note.category
+                                        header = note?.header,
+                                        note = note?.note,
+                                        date = note?.date,
+                                        checkList = note?.checkList,
+                                        category = note?.category
                                     )
                                 )
                             }
@@ -397,7 +493,8 @@ class PrimaryViewModel(
                 val sharedPref = (this[APPLICATION_KEY] as SaveNoteApplication).sharedPref
                 PrimaryViewModel(
                     notesRepositoryImp = notesRepositoryImp,
-                    sharedPref = sharedPref
+                    sharedPref = sharedPref,
+                    dateUtils = DateUtils(DateFormatter())
                 )
             }
         }

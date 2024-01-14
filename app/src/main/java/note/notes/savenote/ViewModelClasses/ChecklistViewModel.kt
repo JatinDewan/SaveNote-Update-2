@@ -21,15 +21,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import note.notes.savenote.Database.CheckList
-import note.notes.savenote.Database.Note
+import note.notes.savenote.Database.roomDatabase.CheckList
+import note.notes.savenote.Database.roomDatabase.Note
 import note.notes.savenote.Utils.CheckStringUtil
-import note.notes.savenote.Utils.DateUtils
 import java.util.UUID
+
 
 class ChecklistViewModel (
     private val primaryViewModel: PrimaryViewModel,
-    private val date: DateUtils = DateUtils(),
     savedStateHandle: SavedStateHandle = SavedStateHandle()
 ): ViewModel() {
 
@@ -98,12 +97,12 @@ class ChecklistViewModel (
     }
 
     fun updateShowCompleted(boolean: Boolean) {
-        viewModelScope.launch { primaryViewModel.sharedPref.saveShowCompleted(boolean) }
+        viewModelScope.launch { primaryViewModel.sharedPref.setCompletedChecklistLayout(boolean) }
     }
 
     private fun updateState() {
         viewModelScope.launch {
-            primaryViewModel.sharedPref.getCompleted.collect{
+            primaryViewModel.sharedPref.getCompletedChecklistEntries.collect {
                 _uiState.update {  currentState -> currentState.copy( showCompleted = it ) }
             }
         }
@@ -223,72 +222,44 @@ class ChecklistViewModel (
             _uiState.update { currentState ->
                 currentState.copy(
                     uid = 0,
-                    header = "",
-                    checklistEntryNumber = null,
-                    checklistKey = null,
-                    fullChecklist = null,
+                    header = ""
                 )
             }
             update("")
         }
     }
 
-
     fun createBlankChecklist() {
         viewModelScope.launch{
-            primaryViewModel.notesRepositoryImp.insertNote(
-                Note(
-                    uid = null,
-                    header = null,
-                    note = null,
-                    date = date.current,
-                    checkList = ArrayList(),
-                    category = null
-                )
-            )
-            primaryViewModel.notesRepositoryImp.getNote().collect {
-                if(it.isNotEmpty()) {
-                    if(
-                        it.last().note.isNullOrEmpty() &&
-                        it.last().header.isNullOrEmpty() &&
-                        it.last().checkList.isNullOrEmpty()
-                    ){
-                        navigateToChecklist(it.last())
-                    }
-                }
+            primaryViewModel.insertNote{
             }
+
+//            primaryViewModel.notesRepositoryImp.getNote().collect {
+//                if (it.isNotEmpty()) {
+//                    if (
+//                        it.last().note.isNullOrEmpty() &&
+//                        it.last().header.isNullOrEmpty() &&
+//                        it.last().checkList.isNullOrEmpty()
+//                    ) primaryViewModel.getNote { note -> note.last() }
+//                }
+//            }
         }
     }
 
     private fun editOrDeleteChecklist(){
         val headerCheck = uiState.value.fullChecklist?.header != checkStringUtil.checkString(uiState.value.header)
         val checklistCheck = uiState.value.fullChecklist?.checkList != temporaryChecklist
-        viewModelScope.launch{
-            when {
-                uiState.value.header.isEmpty() && temporaryChecklist.isEmpty() -> {
-                    primaryViewModel.notesRepositoryImp.deleteNote(
-                        Note(
-                            uiState.value.uid,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null
-                        )
-                    )
-                }
-                headerCheck || checklistCheck -> {
-                    primaryViewModel.notesRepositoryImp.editNote(
-                        Note(
-                            uiState.value.uid,
-                            checkStringUtil.checkString(uiState.value.header),
-                            null,
-                            DateUtils().current,
-                            ArrayList(temporaryChecklist),
-                            uiState.value.category
-                        )
-                    )
-                }
+        when {
+            uiState.value.header.isEmpty() && temporaryChecklist.isEmpty() -> {
+                primaryViewModel.deleteNote(uiState.value.uid)
+            }
+            headerCheck || checklistCheck -> {
+                primaryViewModel.editNote(
+                    uid = uiState.value.uid,
+                    header = checkStringUtil.checkString(uiState.value.header),
+                    checklist = ArrayList(temporaryChecklist),
+                    category = uiState.value.category
+                )
             }
         }
     }
@@ -297,18 +268,12 @@ class ChecklistViewModel (
         val headerCheck = uiState.value.fullChecklist?.header != checkStringUtil.checkString(uiState.value.header)
         val checklistCheck = uiState.value.fullChecklist?.checkList != temporaryChecklist
         if(headerCheck || checklistCheck) {
-            viewModelScope.launch {
-                primaryViewModel.notesRepositoryImp.editNote(
-                    Note(
-                        uiState.value.uid,
-                        checkStringUtil.checkString(uiState.value.header),
-                        null,
-                        DateUtils().current,
-                        ArrayList(temporaryChecklist),
-                        uiState.value.category
-                    )
-                )
-            }
+            primaryViewModel.editNote(
+                uid = uiState.value.uid,
+                header = checkStringUtil.checkString(uiState.value.header),
+                checklist = ArrayList(temporaryChecklist),
+                category = uiState.value.category
+            )
         }
     }
 
@@ -323,7 +288,9 @@ class ChecklistViewModel (
             openNewChecklist()
             clearValuesChecklist()
             delay(400)
+            println("HI")
             createBlankChecklist()
+            println("HI2")
             primaryViewModel.newEntryButton()
         }
     }

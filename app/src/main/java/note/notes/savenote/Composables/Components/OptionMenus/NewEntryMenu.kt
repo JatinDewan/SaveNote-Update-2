@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
-import androidx.compose.material.Colors
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme.colors
@@ -86,11 +85,6 @@ fun NewEntryButton (
             }
         }
     )
-}
-
-@Composable
-fun colourSelectionSimplifier(condition: Boolean, c1: Color, c2: Color): Colors {
-    return if(condition) colors.apply { c1 } else colors.apply { c2 }
 }
 
 @OptIn(ExperimentalMaterialApi::class)

@@ -1,8 +1,8 @@
 package note.notes.savenote
 
-import org.junit.Test
-
-import org.junit.Assert.*
+import note.notes.savenote.Utils.DateFormatter
+import note.notes.savenote.Utils.DateUtils
+import org.junit.jupiter.api.Assertions
 
 /**
  * Example local unit test, which will execute on the development machine (host).
@@ -10,8 +10,18 @@ import org.junit.Assert.*
  * See [testing documentation](http://d.android.com/tools/testing).
  */
 class ExampleUnitTest {
-    @Test
+    private val sample = DateUtils(DateFormatter())
+    @org.junit.jupiter.api.Test
     fun addition_isCorrect() {
-        assertEquals(4, 2 + 2)
+        Assertions.assertEquals(4, 2 + 2)
     }
+
+    @org.junit.jupiter.api.Test
+    fun formatDateAndTime() {
+        Assertions.assertEquals(
+            "Yesterday 22:40",
+            sample.formatDateAndTime("11 January 24, Thursday, 22:40")
+        )
+    }
+
 }

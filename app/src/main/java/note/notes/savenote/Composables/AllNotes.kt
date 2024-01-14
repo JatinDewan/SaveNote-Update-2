@@ -48,7 +48,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.SoftwareKeyboardController
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -61,9 +61,9 @@ import note.notes.savenote.Composables.Components.ConfirmDelete
 import note.notes.savenote.Composables.Components.EntryCards
 import note.notes.savenote.Composables.Components.OptionMenus.MoreOptionsMain
 import note.notes.savenote.Composables.Components.OptionMenus.NewEntryButton
-import note.notes.savenote.Database.Note
+import note.notes.savenote.Database.roomDatabase.Note
 import note.notes.savenote.R
-import note.notes.savenote.Utils.DateUtils
+import note.notes.savenote.Utils.rememberForeverLazyListState
 import note.notes.savenote.ViewModelClasses.ChecklistViewModel
 import note.notes.savenote.ViewModelClasses.NotesViewModel
 import note.notes.savenote.ViewModelClasses.PrimaryUiState
@@ -79,24 +79,20 @@ fun AllNotesView(
     notesViewModel: NotesViewModel,
     allEntries: List<Note>,
     favoriteEntries: List<Note>,
-    date: DateUtils,
     checklistViewModel: ChecklistViewModel,
-    keyboardController: SoftwareKeyboardController,
-    navigateNewNote:() -> Unit,
-    navigateNewChecklist:() -> Unit,
     focusRequester: FocusRequester,
     context: Context,
     focusManager: FocusManager,
     offset: IntOffset,
-    gridState: LazyStaggeredGridState,
-    nestedScrollConnection: NestedScrollConnection,
     modifier: Modifier = Modifier,
-    gridStateObserver: Boolean
 ) {
 
     val primaryUiState by primaryViewModel.uiState.collectAsState()
     val scaffoldState = rememberScaffoldState()
     val gridSize by remember { derivedStateOf { if (primaryUiState.currentPage) 2 else 1 } }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val gridState = rememberForeverLazyListState(key = "grid")
+    val gridStateObserver by remember { derivedStateOf { gridState.firstVisibleItemIndex > 1 } }
     val createBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
         uri -> primaryViewModel.backUpNotes(uri,context)
     }
@@ -111,7 +107,7 @@ fun AllNotesView(
     BackHandler(
         onBack = {
             primaryViewModel.endSearch(focusManager)
-            keyboardController.hide()
+            keyboardController?.hide()
             primaryViewModel.dropDown(false)
             primaryViewModel.newEntryButton()
             primaryViewModel.showBackup(false)
@@ -127,11 +123,7 @@ fun AllNotesView(
 
             MoreOptionsMain(
                 dismiss = primaryUiState.dropDown,
-                backUp = {
-                    primaryViewModel.dropDown(false)
-                    primaryViewModel.showSortBy(false)
-                    primaryViewModel.showBackup(true)
-                },
+                backUp = { primaryViewModel.showBackup(true) },
                 rateApp = { println(primaryUiState.favoriteEntries.size) },
                 expandedIsFalse = { primaryViewModel.dropDown(false) },
                 help = { primaryViewModel.help(context) },
@@ -146,9 +138,10 @@ fun AllNotesView(
                 startSearch = { primaryViewModel.startSearch(focusRequester) },
                 endSearch = { primaryViewModel.endSearch(focusManager) },
                 moreOptions = { primaryViewModel.dropDown(!primaryUiState.dropDown) },
-                changeView = { primaryViewModel.updateCurrentPageView(!primaryUiState.currentPage) },
+                changeView = { primaryViewModel.updateCurrentPageView1(primaryUiState.currentPage) },
                 offset = offset,
-                animateBarOffset = primaryUiState.animateCloseBar
+                animateBarOffset = primaryUiState.animateCloseBar,
+                isMenuOpen = primaryUiState.dropDown
             )
 
             NewEntryButton(
@@ -156,8 +149,8 @@ fun AllNotesView(
                 expand = { primaryViewModel.newEntryButton(true) },
                 collapse = { primaryViewModel.newEntryButton() },
                 hideButton = !primaryUiState.showSearchBar && !primaryUiState.dropDown,
-                navigateNewChecklist = navigateNewChecklist::invoke,
-                navigateNewNote = navigateNewNote::invoke
+                navigateNewChecklist = { checklistViewModel.navigateNewChecklist() },
+                navigateNewNote = { notesViewModel.navigateNewNote() }
             )
 
             ConfirmDelete(
@@ -185,7 +178,6 @@ fun AllNotesView(
                         checklistViewModel = checklistViewModel,
                         primaryUiState = primaryUiState,
                         notesViewModel = notesViewModel,
-                        date = date,
                         gridSize = gridSize
                     )
                 }
@@ -198,8 +190,7 @@ fun AllNotesView(
                         checklistViewModel = checklistViewModel,
                         primaryUiState = primaryUiState,
                         notesViewModel = notesViewModel,
-                        date = date,
-                        nestedScrollConnection = nestedScrollConnection,
+                        nestedScrollConnection = primaryViewModel.collapsingBarConnection(gridStateObserver),
                         gridSize = gridSize
                     )
                 }
@@ -218,7 +209,6 @@ fun AllEntriesView(
     checklistViewModel: ChecklistViewModel,
     primaryUiState: PrimaryUiState,
     notesViewModel: NotesViewModel,
-    date: DateUtils,
     nestedScrollConnection: NestedScrollConnection,
     gridSize: Int,
 ){
@@ -254,7 +244,6 @@ fun AllEntriesView(
                 notesViewModel = notesViewModel,
                 checklistViewModel = checklistViewModel,
                 noteEntry = favoritesEntries,
-                date = date
             )
         }
 
@@ -268,7 +257,6 @@ fun AllEntriesView(
                 notesViewModel = notesViewModel,
                 checklistViewModel = checklistViewModel,
                 noteEntry = allEntries,
-                date = date
             )
         }
     }
@@ -282,7 +270,6 @@ fun SearchView(
     checklistViewModel: ChecklistViewModel,
     primaryUiState: PrimaryUiState,
     notesViewModel: NotesViewModel,
-    date: DateUtils,
     gridSize: Int,
 ){
     Column{
@@ -316,7 +303,6 @@ fun SearchView(
                     notesViewModel = notesViewModel,
                     checklistViewModel = checklistViewModel,
                     noteEntry = searchResults,
-                    date = date,
                     isSearchQuery = true,
                 )
             }
@@ -333,7 +319,6 @@ fun EntryTemplate(
     notesViewModel: NotesViewModel,
     checklistViewModel: ChecklistViewModel,
     noteEntry: Note,
-    date:DateUtils,
     isSearchQuery: Boolean = false
 
 ){
@@ -348,7 +333,6 @@ fun EntryTemplate(
                 modifier = Modifier.animateContentSize(tween(300)),
                 primaryViewModel = primaryViewModel,
                 note = noteEntry,
-                date = date,
                 isSearchQuery = isSearchQuery,
                 onLongPress = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -358,24 +342,14 @@ fun EntryTemplate(
                     when (noteEntry.checkList.isNullOrEmpty()) {
                         true -> {
                             primaryViewModel.cardFunctionSelection(
-                                returnOperationOne = {
-                                    notesViewModel.navigateToNote(
-                                        noteEntry,
-                                        true
-                                    )
-                                },
+                                returnOperationOne = { notesViewModel.navigateToNote(noteEntry,true) },
                                 returnOperationTwo = { primaryViewModel.deleteTally(noteEntry) }
                             )
                         }
 
                         else -> {
                             primaryViewModel.cardFunctionSelection(
-                                returnOperationOne = {
-                                    checklistViewModel.navigateToChecklist(
-                                        noteEntry,
-                                        true
-                                    )
-                                },
+                                returnOperationOne = { checklistViewModel.navigateToChecklist(noteEntry,true) },
                                 returnOperationTwo = { primaryViewModel.deleteTally(noteEntry) }
                             )
                         }
@@ -428,6 +402,7 @@ fun NoResultsFound(
     }
 }
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
 fun SpacerAnimation(primaryUiState: PrimaryUiState) {
     val spacerHeight by animateDpAsState(

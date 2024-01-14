@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,6 +36,7 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -61,13 +62,15 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import note.notes.savenote.Composables.Components.AppBars.TopNavigationChecklist
 import note.notes.savenote.Composables.Components.CustomTextField
 import note.notes.savenote.Composables.Components.OptionMenus.MoreOptionsChecklist
 import note.notes.savenote.Composables.Components.TextFieldPlaceHolder
-import note.notes.savenote.Database.CheckList
+import note.notes.savenote.Database.roomDatabase.CheckList
 import note.notes.savenote.R
 import note.notes.savenote.Utils.Keyboard
 import note.notes.savenote.Utils.SizeUtils
@@ -89,8 +92,7 @@ fun ChecklistComposer(
     focusManager: FocusManager,
     focusRequester: FocusRequester,
     keyboard: State<Keyboard>,
-    context: Context,
-    closeScreen:() -> Unit
+    context: Context
 ) {
 
     val checklistUiState by checklistViewModel.uiState.collectAsState()
@@ -98,33 +100,31 @@ fun ChecklistComposer(
     val lifecycleOwner = LocalLifecycleOwner.current
     val stateLifecycle by lifecycleOwner.lifecycle.observeAsState()
     val state = rememberReorderableLazyListState(
-        canDragOver = { from, _ -> checklistViewModel.dragRestriction(from.index) },
-        onMove = { from, to -> checklistViewModel.onMoveIndexer(from.key, to.key) }
+        canDragOver = { from, _ -> derivedStateOf{ checklistViewModel.dragRestriction(from.index) }.value },
+        onMove = { from, to -> derivedStateOf{ checklistViewModel.onMoveIndexer(from.key, to.key) }.value }
     )
     val showButton by remember { derivedStateOf { state.listState.firstVisibleItemIndex > 1 } }
 
-//    if(keyboard.value == Keyboard.Closed) {
-//        LaunchedEffect(!checklistUiState.reArrange) {
-//            focusManager.clearFocus()
-//            checklistViewModel.clearChecklistEdit()
-//        }
-//    }
+    if(keyboard.value == Keyboard.Closed) {
+        LaunchedEffect(!checklistUiState.reArrange) {
+            focusManager.clearFocus()
+            checklistViewModel.clearChecklistEdit()
+        }
+    }
 
-//    LaunchedEffect(stateLifecycle) {
-//        if(checklistViewModel.checklistEntry.text.isNotEmpty()) {
-//            if (stateLifecycle == Lifecycle.Event.ON_RESUME) {
-//                focusRequester.requestFocus()
-//            }
-//        }
-//
-//        if (stateLifecycle == Lifecycle.Event.ON_PAUSE) {
-//            checklistViewModel.saveChecklistEdit()
-//        }
-//    }
+    LaunchedEffect(stateLifecycle) {
+        if(checklistViewModel.checklistEntry.text.isNotEmpty()) {
+            if (stateLifecycle == Lifecycle.Event.ON_RESUME) {
+                focusRequester.requestFocus()
+            }
+        }
 
-    BackHandler(
-        onBack = { checklistViewModel.onBackPress(closeScreen) }
-    )
+        if (stateLifecycle == Lifecycle.Event.ON_PAUSE) {
+            checklistViewModel.saveChecklistEdit()
+        }
+    }
+
+    BackHandler { checklistViewModel.onBackPress { checklistViewModel.openNewChecklist(false) } }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -133,7 +133,9 @@ fun ChecklistComposer(
                 backButton = {
                     checklistViewModel.pullUp()
                     focusManager.clearFocus()
-                    checklistViewModel.returnAndSaveChecklist(closeScreen)
+                    checklistViewModel.returnAndSaveChecklist {
+                        checklistViewModel.openNewChecklist(false)
+                    }
                 },
                 moreOptions = {
                     focusManager.clearFocus()
@@ -157,12 +159,19 @@ fun ChecklistComposer(
                         .background(colors.background)
                         .reorderable(state)
                 ) {
-                    stickyHeader(key = UUID.randomUUID()) {
+                    stickyHeader(key = 9038403849028408932) {
                         CustomTextField(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(start = 14.dp),
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.Bold,
+                            textColour = colors.onSecondary,
                             value = checklistUiState.header,
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Sentences,
+                                imeAction = ImeAction.Next
+                            ),
                             onValueChange = { checklistViewModel.header(it) },
                             decorationBox = {
                                 TextFieldPlaceHolder(
@@ -171,62 +180,42 @@ fun ChecklistComposer(
                                     fontSize = 25.sp,
                                     fontWeight = FontWeight.Bold
                                 )
-                            },
-                            keyboardAction = KeyboardActions(
-                                onDone = { checklistViewModel.addChecklistEntry() }
-                            ),
-                            keyboardOptions = KeyboardOptions(
-                                capitalization = KeyboardCapitalization.Sentences,
-                                imeAction = ImeAction.Next
-                            ),
-                            fontSize = 25.sp,
-                            fontWeight = FontWeight.Bold,
-                            textColour = colors.onSecondary
+                            }
                         )
                     }
 
-                    item(key = UUID.randomUUID()) { Spacer(modifier = Modifier.height(10.dp)) }
+                    item(key = UUID.randomUUID().toString()) { Spacer(modifier = Modifier.height(10.dp)) }
 
-                    stickyHeader(key = UUID.randomUUID()) { }
+                    stickyHeader(key = UUID.randomUUID().toString()) { }
 
                     items(
                         items = checklistViewModel.checklistUncheckedUpdater(),
                         key = { notes -> notes.key!! },
                     ) { items ->
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         ReorderableItem(state, key = items.key) { isDragging ->
-                            Column(
-                                modifier = Modifier
-                                    .padding(horizontal = 10.dp)
-                                    .animateItemPlacement(
-                                        animationSpec = tween(
-                                            durationMillis = 300,
-                                            easing = FastOutSlowInEasing
-                                        )
-                                    )
-                            ){
-                                CheckList(
-                                    modifier = Modifier.detectReorder(state),
-                                    checkList = CheckList(items.note, items.strike, items.key),
-                                    editEntry = checklistUiState.checklistKey == items.key,
-                                    checklistViewModel = checklistViewModel,
-                                    isDragging = isDragging,
-                                    reArrange = checklistUiState.reArrange,
-                                    focusManager = focusManager
-                                )
-                            }
+                            CheckList(
+                                modifier = Modifier.detectReorder(state),
+                                modifierColumn = Modifier.animateItemPlacement(),
+                                checkList = CheckList(items.note, items.strike, items.key),
+                                editEntry = checklistUiState.checklistKey == items.key,
+                                checklistViewModel = checklistViewModel,
+                                isDragging = isDragging,
+                                reArrange = checklistUiState.reArrange,
+                                focusManager = focusManager
+                            )
                         }
                     }
 
-                    item(key = UUID.randomUUID()) { Spacer(modifier = Modifier.height(10.dp)) }
+                    item(key = UUID.randomUUID().toString()) { Spacer(modifier = Modifier.height(10.dp)) }
 
-                    item(key = UUID.randomUUID()) {
+                    item(key = 3249702398470392847) {
                         Row(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .bringIntoViewRequester(bringIntoViewRequester)
                                 .fillMaxWidth()
+                                .bringIntoViewRequester(bringIntoViewRequester)
                                 .padding(start = 10.dp, end = 10.dp, bottom = 10.dp)
                         ) {
                             ChecklistIcons(
@@ -243,85 +232,67 @@ fun ChecklistComposer(
                                     .fillMaxWidth()
                                     .focusRequester(focusRequester)
                                     .onFocusChanged {
-                                        if (it.isFocused) {
-                                            checklistViewModel.editChecklistEntry(0)
-//                                            coroutineScope.launch{ bringIntoViewRequester.bringIntoView() }
-//                                            focusRequester.requestFocus()
-                                        }
-                                        if(!it.isFocused) {
-                                            focusRequester.requestFocus()
-                                        }
+                                        if (it.isFocused) checklistViewModel.editChecklistEntry(0)
                                     },
                                 value = checklistViewModel.checklistEntry.text,
                                 onValueChange = { checklistViewModel.update(it) },
                                 maxLines = 15,
                                 onTextLayout = { coroutineScope.launch { bringIntoViewRequester.bringIntoView() } },
+                                keyboardAction = KeyboardActions(
+                                    onDone = {
+                                       coroutineScope.launch {
+                                           checklistViewModel.addChecklistEntry()
+                                           delay(50)
+                                           bringIntoViewRequester.bringIntoView()
+                                       }
+                                    }
+                                ),
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.Sentences,
+                                    imeAction = ImeAction.Done
+                                ),
                                 decorationBox = {
                                     TextFieldPlaceHolder(
                                         showPlaceHolder = checklistViewModel.checklistEntry.text.isEmpty(),
                                         text = R.string.AddEntry,
                                         fontSize = 15.sp
                                     )
-                                },
-                                keyboardAction = KeyboardActions(
-                                    onDone = {
-                                        checklistViewModel.addChecklistEntry()
-                                    }
-                                ),
-                                keyboardOptions = KeyboardOptions(
-                                    capitalization = KeyboardCapitalization.Sentences,
-                                    imeAction = ImeAction.Done
-                                )
+                                }
                             )
                         }
                     }
 
-                    item(key = UUID.randomUUID()) { Spacer(modifier = Modifier.height(10.dp)) }
+                    item(key = UUID.randomUUID().toString()) { Spacer(modifier = Modifier.height(10.dp)) }
 
                     items(
                         items = checklistViewModel.checklistCheckedUpdater(),
                         key = { notes -> notes.key!! }
                     ) { items ->
-                        if(checklistUiState.showCompleted){
-                            Column(
-                                modifier = Modifier
-                                    .padding(horizontal = 5.dp)
-                                    .animateItemPlacement(
-                                        animationSpec = tween(
-                                            durationMillis = 300,
-                                            easing = FastOutSlowInEasing
-                                        )
-                                    )
-                            ) {
-                                CheckListCompleted(
-                                    checkList = CheckList(items.note, items.strike, items.key),
-                                    checklistViewModel = checklistViewModel,
-                                )
-                            }
-                        }
+                        CheckListCompleted(
+                            modifierColumn = Modifier.animateItemPlacement(),
+                            checkList = CheckList(items.note, items.strike, items.key),
+                            checklistViewModel = checklistViewModel,
+                            showChecked = checklistUiState.showCompleted
+                        )
                     }
-                    item(key = UUID.randomUUID()) { Spacer(modifier = Modifier.height(10.dp)) }
+                    item(key = UUID.randomUUID().toString()) { Spacer(modifier = Modifier.height(10.dp)) }
                 }
 
                 MoreOptionsChecklist(
                     dismiss = checklistUiState.isVisible,
+                    canReArrange = checklistUiState.reArrange,
+                    showCompletedBoolean = checklistUiState.showCompleted,
+                    expandedIsFalse = { checklistViewModel.pullUp() },
+                    unCheckCompleted = { checklistViewModel.unCheckCompleted() },
+                    confirmDelete = { checklistViewModel.confirmDeleteAllChecked() },
                     share = { context.startActivity(checklistViewModel.shareChecklist()) },
                     reArrange = {
                         checklistViewModel.reArrange(!checklistUiState.reArrange)
                         checklistViewModel.pullUp()
                     },
-                    unCheckCompleted = {
-                        checklistViewModel.unCheckCompleted()
-                    },
-                    confirmDelete = {
-                        checklistViewModel.confirmDeleteAllChecked()
-                    },
-                    expandedIsFalse = { checklistViewModel.pullUp() },
                     showCompleted = {
                         checklistViewModel.updateShowCompleted(!checklistUiState.showCompleted)
-                    },
-                    showCompletedBoolean = checklistUiState.showCompleted,
-                    canReArrange = checklistUiState.reArrange
+                    }
                 )
             }
         }
@@ -332,6 +303,7 @@ fun ChecklistComposer(
 @Composable
 fun CheckList(
     modifier: Modifier = Modifier,
+    modifierColumn: Modifier = Modifier,
     checkList: CheckList,
     editEntry: Boolean,
     isDragging: Boolean,
@@ -345,86 +317,91 @@ fun CheckList(
     val focusRequester = remember { FocusRequester() }
 
     val entryBackground: Color by animateColorAsState(
-        targetValue = if(editEntry || isDragging) colors.secondary else colors.background,
+        targetValue = if(editEntry || isDragging) colors.secondary else Color.Transparent,
         animationSpec = tween(150),
         label = ""
     )
 
-    Card(
-        modifier = Modifier
-            .bringIntoViewRequester(localBringIntoViewRequester)
-            .fillMaxSize(),
-        backgroundColor = entryBackground,
-        elevation = 0.dp
-    ) {
-        Row {
+    Column(
+        modifier = modifierColumn.padding(horizontal = 10.dp)
+    ){
+        Card(
+            modifier = Modifier
+                .imePadding()
+                .bringIntoViewRequester(localBringIntoViewRequester)
+                .fillMaxSize(),
+            backgroundColor = entryBackground,
+            elevation = 0.dp
+        ) {
+            Row {
 
-            AnimatedVisibility(
-                visible = reArrange,
-                content = {
-                    ChecklistIcons(
-                        modifier = modifier,
-                        enabled = !editEntry,
-                        onClick = { },
-                        icon = R.drawable.drag_handle_01,
-                        iconColour = colors.onSurface
-                    )
-                }
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ChecklistIcons(
-                    onClick = { checklistViewModel.deleteOrComplete(checkList) },
-                    icon = checklistViewModel.iconSelection(
-                        iconSelectionOne = isDragging,
-                        iconSelectionTwo = myUiState.checklistKey == checkList.key
-                    )
+                AnimatedVisibility(
+                    visible = reArrange,
+                    content = {
+                        ChecklistIcons(
+                            modifier = modifier,
+                            enabled = !editEntry,
+                            onClick = { },
+                            icon = R.drawable.drag_handle_01,
+                            iconColour = colors.onSurface
+                        )
+                    }
                 )
 
-                CustomTextField(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(5.dp)
-                        .focusRequester(focusRequester)
-                        .onFocusChanged { focus ->
-                            checklistViewModel.focusChange(
-                                focusState = focus,
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    ChecklistIcons(
+                        onClick = { checklistViewModel.deleteOrComplete(checkList) },
+                        icon = checklistViewModel.iconSelection(
+                            iconSelectionOne = isDragging,
+                            iconSelectionTwo = myUiState.checklistKey == checkList.key
+                        )
+                    )
+
+                    CustomTextField(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(5.dp)
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { focus ->
+                                checklistViewModel.focusChange(
+                                    focusState = focus,
+                                    checkList = checkList,
+                                    isEntryEmpty = updateEntry.isEmpty(),
+                                    entry = updateEntry
+                                )
+                            },
+                        value = updateEntry,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        onTextLayout = {
+                            checklistViewModel.bringInToViewRequest(
                                 checkList = checkList,
-                                isEntryEmpty = updateEntry.isEmpty(),
-                                entry = updateEntry
+                                bringIntoViewRequester = localBringIntoViewRequester
                             )
                         },
-                    value = updateEntry,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    onTextLayout = {
-                        checklistViewModel.bringInToViewRequest(
-                            checkList = checkList,
-                            bringIntoViewRequester = localBringIntoViewRequester
-                        )
-                    },
-                    keyboardAction = KeyboardActions(
-                        onDone = {
-                            focusManager.clearFocus()
-                            checklistViewModel.clearChecklistEdit()
+                        keyboardAction = KeyboardActions(
+                            onDone = {
+                                focusManager.clearFocus()
+                                checklistViewModel.clearChecklistEdit()
+                                checklistViewModel.entryEditOrAdd(
+                                    entry = updateEntry,
+                                    checkList = checkList
+                                )
+                            }
+                        ),
+                        onValueChange = {
+                            updateEntry = it
                             checklistViewModel.entryEditOrAdd(
                                 entry = updateEntry,
+                                deletable = false,
                                 checkList = checkList
                             )
-                        }
-                    ),
-                    onValueChange = {
-                        updateEntry = it
-                        checklistViewModel.entryEditOrAdd(
-                            entry = updateEntry,
-                            deletable = false,
-                            checkList = checkList
-                        )
-                    },
-                    decorationBox = { /*TODO*/ }
-                )
+                        },
+                        decorationBox = { /*TODO*/ }
+                    )
+                }
             }
         }
     }
@@ -433,6 +410,8 @@ fun CheckList(
 @Composable
 fun CheckListCompleted(
     modifier: Modifier = Modifier,
+    modifierColumn: Modifier,
+    showChecked: Boolean,
     checkList: CheckList,
     checklistViewModel: ChecklistViewModel,
 ){
@@ -443,44 +422,50 @@ fun CheckListCompleted(
     val topShape = size.DPISelection(firstIndex, 15.dp, 0.dp )
     val bottomShape = size.DPISelection(lastIndex, 15.dp, 0.dp )
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        backgroundColor = colors.secondary,
-        shape = RoundedCornerShape(
-            topStart = topShape, topEnd = topShape,
-            bottomStart = bottomShape, bottomEnd = bottomShape
-        )
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.padding(
-                    start = 5.dp,
-                    end = 5.dp,
-                    top = if(firstIndex) 7.dp else 5.dp,
-                    bottom =  if(lastIndex) 7.dp else 5.dp
-                ),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ){
-                ChecklistIcons(
-                    modifier = Modifier.align(Alignment.Top),
-                    onClick = { checklistViewModel.checklistCompletedTask(checkList) },
-                    icon = R.drawable.check_circle,
-                    iconSize = 20.dp
+    if(showChecked){
+        Column(
+            modifier = modifierColumn.padding(horizontal = 5.dp)
+        ) {
+            Card(
+                modifier = modifier.fillMaxWidth(),
+                backgroundColor = colors.secondary,
+                shape = RoundedCornerShape(
+                    topStart = topShape, topEnd = topShape,
+                    bottomStart = bottomShape, bottomEnd = bottomShape
                 )
-                Text(
-                    modifier = Modifier
-                        .padding(5.dp)
-                        .fillMaxWidth(),
-                    text = checkList.note,
-                    color = colors.onSurface,
-                    fontFamily = UniversalFamily,
-                    fontSize = 15.sp
-                )
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.padding(
+                            start = 5.dp,
+                            end = 5.dp,
+                            top = if(firstIndex) 7.dp else 5.dp,
+                            bottom =  if(lastIndex) 7.dp else 5.dp
+                        ),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ){
+                        ChecklistIcons(
+                            modifier = Modifier.align(Alignment.Top),
+                            onClick = { checklistViewModel.checklistCompletedTask(checkList) },
+                            icon = R.drawable.check_circle
+                        )
+                        Text(
+                            modifier = Modifier
+                                .padding(5.dp)
+                                .fillMaxWidth(),
+                            text = checkList.note,
+                            color = colors.onSurface,
+                            fontFamily = UniversalFamily,
+                            fontSize = 15.sp
+                        )
+                    }
+                    if(!lastIndex) Divider(color = colors.background)
+                }
             }
-            if(!lastIndex) Divider(color = colors.background)
         }
     }
+
 }
 
 @Composable
@@ -489,7 +474,7 @@ fun ChecklistIcons(
     enabled: Boolean = true,
     onClick:() -> Unit,
     buttonSize: Dp = 30.dp,
-    iconSize: Dp = 25.dp,
+    iconSize: Dp = 23.dp,
     iconColour: Color = colors.primary,
     icon: Int
 ){

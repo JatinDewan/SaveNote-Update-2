@@ -1,8 +1,6 @@
-package note.notes.savenote.Database
+package note.notes.savenote.Database.roomDatabase
 
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
 
 interface NotesRepository {
 
@@ -10,7 +8,7 @@ interface NotesRepository {
 
     suspend fun insertNote(notes: Note)
 
-    suspend fun deleteNote(notes: Note)
+    suspend fun deleteNote(uid: Int?)
 
     suspend fun editNote(notes: Note)
 
@@ -25,15 +23,15 @@ interface NotesRepository {
 class NotesRepositoryImp (private val notesDao: NoteDao) : NotesRepository {
 
     override suspend fun getNote(): Flow<List<Note>> {
-        return withContext(Dispatchers.IO) { notesDao.getAll() }
+        return notesDao.getAll()
     }
 
     override suspend fun insertNote(notes: Note) {
         return notesDao.insert(notes)
     }
 
-    override suspend fun deleteNote(notes: Note) {
-        return notesDao.delete(notes)
+    override suspend fun deleteNote(uid: Int?) {
+        return notesDao.delete(uid)
     }
 
     override suspend fun editNote(notes: Note) {
