@@ -1,4 +1,4 @@
-package note.notes.savenote.Database.roomDatabase
+package note.notes.savenote.PersistentStorage.roomDatabase
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 
 @Entity
 data class Note(
-    @PrimaryKey val uid: Int?,
+    @PrimaryKey val uid: Int? = null,
     @ColumnInfo(name = "header") val header: String? = null,
     @ColumnInfo(name = "note") val note: String? = null,
     @ColumnInfo(name = "date") val date: String? = null,

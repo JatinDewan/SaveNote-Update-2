@@ -9,7 +9,7 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="note.notes.savenote" />
+                  <option name="appId" value="app.database.nexusgn" />
                 </ConnectionSetting>
               </option>
               <option name="failureTypes">

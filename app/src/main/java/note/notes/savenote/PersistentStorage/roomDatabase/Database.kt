@@ -1,4 +1,4 @@
-package note.notes.savenote.Database.roomDatabase
+package note.notes.savenote.PersistentStorage.roomDatabase
 
 import android.content.Context
 import androidx.room.Database

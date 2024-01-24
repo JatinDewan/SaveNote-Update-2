@@ -3,13 +3,12 @@ package note.notes.savenote.Composables
 import android.annotation.SuppressLint
 import android.content.Context
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -35,23 +34,31 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import note.notes.savenote.Composables.Components.AppBars.BottomPopUpBar
@@ -61,7 +68,7 @@ import note.notes.savenote.Composables.Components.ConfirmDelete
 import note.notes.savenote.Composables.Components.EntryCards
 import note.notes.savenote.Composables.Components.OptionMenus.MoreOptionsMain
 import note.notes.savenote.Composables.Components.OptionMenus.NewEntryButton
-import note.notes.savenote.Database.roomDatabase.Note
+import note.notes.savenote.PersistentStorage.roomDatabase.Note
 import note.notes.savenote.R
 import note.notes.savenote.Utils.rememberForeverLazyListState
 import note.notes.savenote.ViewModelClasses.ChecklistViewModel
@@ -70,6 +77,18 @@ import note.notes.savenote.ViewModelClasses.PrimaryUiState
 import note.notes.savenote.ViewModelClasses.PrimaryViewModel
 import note.notes.savenote.ui.theme.UniversalFamily
 import java.util.UUID
+import kotlin.math.roundToInt
+
+
+@Composable
+fun animateOnScroll(test: Boolean, offset:State<Float>): IntOffset {
+    val animationSpec = animateFloatAsState(targetValue = offset.value,
+        label = ""
+    )
+    val animateOrState = if(!test) offset else animationSpec
+
+    return IntOffset(x = 0, y = animateOrState.value.roundToInt())
+}
 
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @OptIn(ExperimentalComposeUiApi::class)
@@ -83,22 +102,47 @@ fun AllNotesView(
     focusRequester: FocusRequester,
     context: Context,
     focusManager: FocusManager,
-    offset: IntOffset,
     modifier: Modifier = Modifier,
 ) {
 
-    val primaryUiState by primaryViewModel.uiState.collectAsState()
+    val primaryUiState by primaryViewModel.statGetter.collectAsState()
     val scaffoldState = rememberScaffoldState()
-    val gridSize by remember { derivedStateOf { if (primaryUiState.currentPage) 2 else 1 } }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val gridState = rememberForeverLazyListState(key = "grid")
-    val gridStateObserver by remember { derivedStateOf { gridState.firstVisibleItemIndex > 1 } }
-    val createBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
-        uri -> primaryViewModel.backUpNotes(uri,context)
+    val allNotesState = rememberForeverLazyListState(key = "grid")
+    val searchNotesState = rememberForeverLazyListState(key = "grid")
+    val allNotesObserver by remember { derivedStateOf { allNotesState.firstVisibleItemIndex > 1 } }
+    val searchNotesObserver by remember { derivedStateOf { searchNotesState.firstVisibleItemIndex > 1 } }
+    val toolbarHeightPx = with(LocalDensity.current) { 59.dp.roundToPx().toFloat() }
+    val allowAnimation = remember { mutableStateOf(false) }
+    val toolbarOffsetHeightPx = remember { mutableFloatStateOf(0f) }
+
+    val customNestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                val newOffset = toolbarOffsetHeightPx.floatValue + delta
+                toolbarOffsetHeightPx.floatValue = newOffset.coerceIn(-toolbarHeightPx, 0f)
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                allowAnimation.value = false
+                return super.onPostScroll(consumed, available, source)
+            }
+
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                toolbarOffsetHeightPx.floatValue = if(toolbarOffsetHeightPx.floatValue >= -82.5) 0f else -165f
+                allowAnimation.value = true
+                return super.onPostFling(consumed, available)
+            }
+        }
     }
-    val restoreBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
-        uri -> primaryViewModel.restoreNotes(uri,context)
-    }
+
 
 //    Would be nice to add a scroll bar to show how many notes till bottom
 //    could probs also use tap to top? maybe would be nice to be dynamic, maybe after list is larger
@@ -128,20 +172,19 @@ fun AllNotesView(
                 expandedIsFalse = { primaryViewModel.dropDown(false) },
                 help = { primaryViewModel.help(context) },
                 primaryViewModel = primaryViewModel,
-                sortBy = { primaryViewModel.updateCurrentPageView(primaryUiState.sortByView) }
+                sortBy = { primaryViewModel.updateSortByPreference(primaryUiState.sortByView) }
             )
 
             TopNavigationBarHome(
-                startedScrolling = gridStateObserver,
+                startedScrolling = allNotesObserver || searchNotesObserver,
                 primaryViewModel = primaryViewModel,
                 focusRequester = focusRequester,
                 startSearch = { primaryViewModel.startSearch(focusRequester) },
                 endSearch = { primaryViewModel.endSearch(focusManager) },
                 moreOptions = { primaryViewModel.dropDown(!primaryUiState.dropDown) },
-                changeView = { primaryViewModel.updateCurrentPageView1(primaryUiState.currentPage) },
-                offset = offset,
-                animateBarOffset = primaryUiState.animateCloseBar,
-                isMenuOpen = primaryUiState.dropDown
+                changeView = { primaryViewModel.selectLayout(primaryUiState.currentPage) },
+                isMenuOpen = primaryUiState.dropDown,
+                offset = animateOnScroll(test = allowAnimation.value, offset = toolbarOffsetHeightPx)
             )
 
             NewEntryButton(
@@ -157,41 +200,43 @@ fun AllNotesView(
                 popUp = primaryUiState.confirmDelete,
                 cancel = { primaryViewModel.confirmDelete(false) },
                 confirmDelete = { primaryViewModel.deleteSelected() },
-                confirmMessage = stringResource(id = R.string.ConfirmDelete,"${primaryViewModel.temporaryEntryHold.size}")
+                confirmMessage = stringResource(
+                    id = R.string.ConfirmDelete,"${primaryViewModel.temporaryEntryHold.size}"
+                )
             )
 
             BackupAndRestore(
+                primaryViewModel = primaryViewModel,
                 isVisible = primaryUiState.showBackup,
-                backUp = { createBackup.launch("SaveNote_DB") },
-                restore = { restoreBackup.launch(arrayOf("text/plain")) },
                 dismiss = { primaryViewModel.showBackup(false) }
             )
 
         }
     ){ _ ->
-        Crossfade(targetState = primaryUiState.showSearchBar , label = "") { currentView ->
+        Crossfade(targetState = primaryUiState.showSearchBar, label = "") { currentView ->
             when(currentView) {
                 true -> {
                     SearchView(
-                        verticalGridState = gridState,
+                        verticalGridState = searchNotesState,
                         primaryViewModel = primaryViewModel,
                         checklistViewModel = checklistViewModel,
                         primaryUiState = primaryUiState,
                         notesViewModel = notesViewModel,
-                        gridSize = gridSize
+                        gridSize = if (primaryUiState.currentPage) 2 else 1,
+                        keyboardController = keyboardController!!
                     )
                 }
                 false -> {
                     AllEntriesView(
                         allEntries = allEntries,
                         favoriteEntries = favoriteEntries,
-                        verticalGridState = gridState,
+                        verticalGridState = allNotesState,
                         primaryViewModel = primaryViewModel,
                         checklistViewModel = checklistViewModel,
                         primaryUiState = primaryUiState,
                         notesViewModel = notesViewModel,
-                        nestedScrollConnection = primaryViewModel.collapsingBarConnection(gridStateObserver),
-                        gridSize = gridSize
+                        nestedScrollConnection = customNestedScrollConnection,
+                        gridSize = if (primaryUiState.currentPage) 2 else 1
                     )
                 }
             }
@@ -210,7 +255,7 @@ fun AllEntriesView(
     primaryUiState: PrimaryUiState,
     notesViewModel: NotesViewModel,
     nestedScrollConnection: NestedScrollConnection,
-    gridSize: Int,
+    gridSize: Int
 ){
     LazyVerticalStaggeredGrid(
         state = verticalGridState,
@@ -218,7 +263,7 @@ fun AllEntriesView(
             .animateContentSize()
             .fillMaxSize()
             .background(MaterialTheme.colors.background)
-            .nestedScroll(nestedScrollConnection),
+            .nestedScroll(nestedScrollConnection,),
         columns = StaggeredGridCells.Fixed(gridSize),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalItemSpacing = 10.dp,
@@ -262,7 +307,7 @@ fun AllEntriesView(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun SearchView(
     verticalGridState: LazyStaggeredGridState,
@@ -271,12 +316,23 @@ fun SearchView(
     primaryUiState: PrimaryUiState,
     notesViewModel: NotesViewModel,
     gridSize: Int,
+    keyboardController: SoftwareKeyboardController
 ){
+    val customNestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                keyboardController.hide()
+                return Offset.Zero
+            }
+        }
+    }
+
     Column{
         LazyVerticalStaggeredGrid(
             modifier = Modifier
                 .animateContentSize()
                 .fillMaxWidth()
+                .nestedScroll(customNestedScrollConnection)
                 .background(MaterialTheme.colors.background),
             state = verticalGridState,
             columns = StaggeredGridCells.Fixed(gridSize),
@@ -339,20 +395,16 @@ fun EntryTemplate(
                     primaryViewModel.deleteTally(noteEntry)
                 },
                 onEditClick = {
-                    when (noteEntry.checkList.isNullOrEmpty()) {
-                        true -> {
-                            primaryViewModel.cardFunctionSelection(
-                                returnOperationOne = { notesViewModel.navigateToNote(noteEntry,true) },
-                                returnOperationTwo = { primaryViewModel.deleteTally(noteEntry) }
-                            )
-                        }
-
-                        else -> {
-                            primaryViewModel.cardFunctionSelection(
-                                returnOperationOne = { checklistViewModel.navigateToChecklist(noteEntry,true) },
-                                returnOperationTwo = { primaryViewModel.deleteTally(noteEntry) }
-                            )
-                        }
+                    if(noteEntry.checkList.isNullOrEmpty()) {
+                        primaryViewModel.cardFunctionSelection(
+                            navigateEntry = { notesViewModel.navigateToNote(noteEntry,true) },
+                            note = noteEntry
+                        )
+                    } else {
+                        primaryViewModel.cardFunctionSelection(
+                            navigateEntry = { checklistViewModel.navigateToChecklist(noteEntry,true) },
+                            note = noteEntry
+                        )
                     }
                 }
             )

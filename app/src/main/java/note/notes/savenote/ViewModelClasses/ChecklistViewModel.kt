@@ -20,8 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import note.notes.savenote.Database.roomDatabase.CheckList
-import note.notes.savenote.Database.roomDatabase.Note
+import note.notes.savenote.PersistentStorage.roomDatabase.CheckList
+import note.notes.savenote.PersistentStorage.roomDatabase.Note
 import note.notes.savenote.Utils.CheckStringUtil
 import java.util.UUID
 
@@ -66,11 +66,6 @@ class ChecklistViewModel (
         }
     }
 
-    private fun completedNote() {
-        viewModelScope.launch{
-            _uiState.update { currentState -> currentState.copy(completedNotes = false) }
-        }
-    }
 
     fun unCheckCompleted() {
         viewModelScope.launch{
@@ -79,7 +74,7 @@ class ChecklistViewModel (
         }
     }
 
-    fun update(newEntry: String) = viewModelScope.launch{ checklistEntry = TextFieldValue(newEntry) }
+    fun updateChecklistEntry(newEntry: String) = viewModelScope.launch{ checklistEntry = TextFieldValue(newEntry) }
 
     fun pullUp(isVisible: Boolean = false) {
         viewModelScope.launch{
@@ -149,7 +144,6 @@ class ChecklistViewModel (
     fun checklistCompletedTask(checkList: CheckList) {
         viewModelScope.launch{
             temporaryChecklist[temporaryChecklist.indexOf(checkList)] = CheckList(checkList.note, 0, checkList.key)
-            if(checklistCheckedUpdater().isEmpty()) completedNote()
         }
     }
 
@@ -224,7 +218,7 @@ class ChecklistViewModel (
                     header = ""
                 )
             }
-            update("")
+            updateChecklistEntry("")
         }
     }
 
@@ -324,12 +318,11 @@ class ChecklistViewModel (
 
 
     fun returnAndSaveChecklist(closeScreen:()-> Unit){
-        completedNote()
         reArrange(false)
         viewModelScope.launch {
             editOrDeleteChecklist()
-            update("")
-            delay(100)
+            updateChecklistEntry("")
+            delay(200)
             closeScreen()
         }
     }

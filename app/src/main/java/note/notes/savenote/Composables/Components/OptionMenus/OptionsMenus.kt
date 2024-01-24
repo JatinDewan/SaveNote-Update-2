@@ -153,7 +153,7 @@ fun MoreOptionsMain(
 
     val textBackgroundColour = colors.onBackground
     val iconBackgroundColour = colors.onSecondary
-    val primaryUiState by primaryViewModel.uiState.collectAsState()
+    val primaryUiState by primaryViewModel.statGetter.collectAsState()
 
     OptionMenuContainer(
         modifier = modifier.padding(top = 64.dp),

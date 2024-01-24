@@ -1,4 +1,4 @@
-package note.notes.savenote.Database.roomDatabase
+package note.notes.savenote.PersistentStorage.roomDatabase
 
 import kotlinx.coroutines.flow.Flow
 

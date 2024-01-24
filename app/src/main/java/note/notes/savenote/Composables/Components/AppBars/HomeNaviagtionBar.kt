@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateIntOffsetAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -50,21 +49,22 @@ import note.notes.savenote.ViewModelClasses.PrimaryUiState
 import note.notes.savenote.ViewModelClasses.PrimaryViewModel
 import note.notes.savenote.ui.theme.UniversalFamily
 
+
 @Composable
 fun TopNavigationBarHome(
     startedScrolling: Boolean,
-    animateBarOffset: Boolean,
     isMenuOpen: Boolean,
     startSearch:() -> Unit,
     endSearch:() -> Unit,
     moreOptions: () -> Unit,
     changeView: () -> Unit,
-    offset: IntOffset,
     focusRequester: FocusRequester,
+    offset: IntOffset,
     primaryViewModel: PrimaryViewModel
 ) {
-    val primaryUiState by primaryViewModel._uiState.collectAsState()
-    val barAnimation by animateIntOffsetAsState(targetValue = offset, label = "")
+
+    val primaryUiState by primaryViewModel.stateSetter.collectAsState()
+
     val animateDividerColour by animateColorAsState(
         targetValue = if(startedScrolling || isMenuOpen) colors.onBackground else colors.background,
         animationSpec = tween(150),
@@ -78,7 +78,7 @@ fun TopNavigationBarHome(
 
     Card(
         modifier = Modifier
-            .absoluteOffset { if (animateBarOffset) barAnimation else offset }
+            .absoluteOffset { offset }
             .height(60.dp)
             .fillMaxWidth(),
         elevation = if (startedScrolling) 10.dp else 0.dp,
@@ -254,7 +254,7 @@ fun SearchBar(
                     .animateContentSize(tween(150)),
                 value = primaryUiState.searchQuery,
                 searchIsActive = primaryUiState.showSearchBar,
-                onValueChange = { primaryViewModel.searchQuery(it) },
+                onValueChange = { primaryViewModel.processSearchRequest(it) },
                 decorationBox = {
                     TextFieldPlaceHolder(
                         showPlaceHolder = primaryUiState.showSearchBar && primaryUiState.searchQuery.isEmpty() ,

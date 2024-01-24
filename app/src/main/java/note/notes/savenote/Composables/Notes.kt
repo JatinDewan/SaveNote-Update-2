@@ -131,7 +131,7 @@ fun NoteComposer(
                     .focusRequester(focusRequester)
                     .padding(bottom = 10.dp),
                 value = notesViewModel.noteEntry.text,
-                onValueChange = { notesViewModel.update(it) },
+                onValueChange = { notesViewModel.updateNoteEntry(it) },
                 decorationBox = {
                     TextFieldPlaceHolder(
                         showPlaceHolder = notesViewModel.noteEntry.text.isEmpty(),

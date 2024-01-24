@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import note.notes.savenote.Database.roomDatabase.Note
+import note.notes.savenote.PersistentStorage.roomDatabase.Note
 import note.notes.savenote.Utils.CheckStringUtil
 
 class NotesViewModel(
@@ -41,7 +41,7 @@ class NotesViewModel(
             noteChecker(note)
             uid(note.uid)
             header(checkStringUtil.replaceNull(note.header))
-            update(checkStringUtil.replaceNull(note.note))
+            updateNoteEntry(checkStringUtil.replaceNull(note.note))
             category(note.category)
             if(navigateToNote) openNewNote()
         }
@@ -82,7 +82,7 @@ class NotesViewModel(
     fun clearNote(){
         viewModelScope.launch{
             _uiState.update { currentState -> currentState.copy(uid = 0, header = "") }
-            update("")
+            updateNoteEntry("")
         }
     }
 
@@ -107,11 +107,9 @@ class NotesViewModel(
     }
 
     private fun createBlankNote() {
-        viewModelScope.launch{
-            primaryViewModel.insertNote(
-                navigateToNote = { navigateToNote(it) }
-            )
-        }
+        primaryViewModel.insertNote(
+            navigateToNote = { navigateToNote(it) }
+        )
     }
 
     fun saveNoteEdit(){
@@ -134,12 +132,13 @@ class NotesViewModel(
         mutableStateOf(TextFieldValue(""))
     }
 
-    fun update(newEntry: String) = viewModelScope.launch{ noteEntry = TextFieldValue(newEntry) }
+    fun updateNoteEntry(newEntry: String) = viewModelScope.launch{ noteEntry = TextFieldValue(newEntry) }
 
     private fun editOrDeleteNote() {
         val headerCheck = uiState.value.fullNote?.header != checkStringUtil.checkString(uiState.value.header)
         val noteCheck = uiState.value.fullNote?.note != checkStringUtil.checkString(noteEntry.text)
         when {
+
             uiState.value.header.isEmpty() && noteEntry.text.isEmpty() -> {
                 primaryViewModel.deleteNote(uiState.value.uid)
             }

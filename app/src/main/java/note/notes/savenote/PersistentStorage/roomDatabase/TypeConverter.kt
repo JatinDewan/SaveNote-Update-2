@@ -1,4 +1,4 @@
-package note.notes.savenote.Database.roomDatabase
+package note.notes.savenote.PersistentStorage.roomDatabase
 
 import androidx.room.TypeConverter
 import com.google.gson.Gson
@@ -22,7 +22,6 @@ class ArrayListConverter {
             val type = object : TypeToken<List<CheckList>>() {}.type
             gson.fromJson<List<CheckList>>(value, type)
         } catch (e: JsonSyntaxException) {
-            // Optionally log or report the error
             null
         }
     }

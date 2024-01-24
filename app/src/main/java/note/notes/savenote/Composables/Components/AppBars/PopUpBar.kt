@@ -49,7 +49,7 @@ import note.notes.savenote.ui.theme.UniversalFamily
 fun BottomPopUpBar(
     primaryViewModel: PrimaryViewModel,
 ) {
-    val primaryView by primaryViewModel._uiState.collectAsState()
+    val primaryView by primaryViewModel.stateSetter.collectAsState()
     val checkContains by remember { derivedStateOf { primaryViewModel.temporaryEntryHold.containsAll(primaryView.allEntries + primaryView.favoriteEntries) } }
 
     val selectAllIndicator: Color by animateColorAsState(

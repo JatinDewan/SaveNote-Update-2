@@ -37,7 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import note.notes.savenote.Database.roomDatabase.Note
+import note.notes.savenote.PersistentStorage.roomDatabase.Note
 import note.notes.savenote.R
 import note.notes.savenote.Utils.HighlightedText
 import note.notes.savenote.Utils.rangeFinder
@@ -56,7 +56,7 @@ fun EntryCards(
     isSearchQuery: Boolean = false,
 ) {
     val selected = primaryViewModel.temporaryEntryHold.contains(note)
-    val primaryViewState by primaryViewModel.uiState.collectAsState()
+    val primaryViewState by primaryViewModel.statGetter.collectAsState()
 
     val backgroundColour: Color by animateColorAsState(
         targetValue = if(selected) colors.secondaryVariant else colors.secondary,
@@ -116,7 +116,7 @@ fun EntryCards(
             AdditionalInformation(
                 note = note,
                 dateColour = dateColour,
-                currentDate = { primaryViewModel.dateAndTimeDisplay(it) }
+                currentDate = { date -> primaryViewModel.dateAndTimeDisplay(date, note) }
             )
         }
     }

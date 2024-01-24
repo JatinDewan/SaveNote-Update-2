@@ -1,4 +1,4 @@
-package note.notes.savenote.Database.roomDatabase
+package note.notes.savenote.PersistentStorage.roomDatabase
 
 import androidx.room.Dao
 import androidx.room.Delete

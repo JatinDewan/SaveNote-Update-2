@@ -1,7 +1,7 @@
 package note.notes.savenote.ViewModelClasses
 
 import androidx.compose.runtime.Immutable
-import note.notes.savenote.Database.roomDatabase.Note
+import note.notes.savenote.PersistentStorage.roomDatabase.Note
 
 @Immutable
 data class PrimaryUiState (
@@ -14,10 +14,7 @@ data class PrimaryUiState (
     val currentPage: Boolean = true,
     val showBackup: Boolean = false,
     val dropDown: Boolean = false,
-    val openNote: Boolean = false,
-    val openChecklist: Boolean = false,
-    val animateCloseBar: Boolean = true,
     val sortByView: Int = 0,
     val barOffsetY: Float = 0f,
-    val searchQuery: String = ""
+    val searchQuery: String = "",
 )

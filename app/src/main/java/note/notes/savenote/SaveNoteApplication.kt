@@ -1,11 +1,10 @@
 package note.notes.savenote
 
 import android.app.Application
-
-import note.notes.savenote.Database.roomDatabase.NoteDao_Impl
-import note.notes.savenote.Database.roomDatabase.NoteDatabase
-import note.notes.savenote.Database.roomDatabase.NotesRepositoryImp
-import note.notes.savenote.Database.sharedPreferences.SharedPref
+import note.notes.savenote.PersistentStorage.roomDatabase.NoteDao_Impl
+import note.notes.savenote.PersistentStorage.roomDatabase.NoteDatabase
+import note.notes.savenote.PersistentStorage.roomDatabase.NotesRepositoryImp
+import note.notes.savenote.PersistentStorage.sharedPreferences.SharedPref
 
 class SaveNoteApplication: Application() {
     lateinit var notesRepositoryImp: NotesRepositoryImp

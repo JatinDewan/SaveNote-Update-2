@@ -1,4 +1,4 @@
-package note.notes.savenote.Database.sharedPreferences
+package note.notes.savenote.PersistentStorage.sharedPreferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore

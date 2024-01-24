@@ -1,51 +1,95 @@
 package note.notes.savenote.Utils
 
+import android.os.Build
+import android.os.Build.VERSION_CODES
 import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 
+interface OldDateConverter {
+    fun convertOldDate(date: String): String
+}
 
 interface DateUtilities {
-    fun formatDateAndTime(date: String): String
-
     fun getCurrentDateAndTime(): String
+
+    fun  formatDateAndTime(dateAndTime: String, replaceNotesDate:(String) -> Unit): String
 }
 
-interface FormatType {
-    fun dateFormat(): SimpleDateFormat
-}
+class DateUtils : DateUtilities, OldDateConverter {
 
-class DateFormatter: FormatType {
-    override fun dateFormat(): SimpleDateFormat {
-        return SimpleDateFormat("dd MMMM yy, EEEE, HH:mm", Locale.getDefault()).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
+    val testInstantDate = "2024-01-17T17:13:27.721281Z"
+    val testSimpleDate = "2024-01-20, 15:37:37.000699"
+    val testOldDate = "20 January 24, Saturday, 16:20"
+
+    /**
+     * Allows to convert V1.0 date save format in to newer format. Also upgrades strings from
+     * Android Versions Older than Android 8 if Android version is upgraded
+     * */
+    override fun convertOldDate(date: String): String {
+        val oldFormat = SimpleDateFormat("dd MMMM yy, EEEE, HH:mm", Locale.getDefault())
+        val newFormat = SimpleDateFormat("yyyy-MM-dd, HH:mm:ss.ssssss", Locale.getDefault())
+        val parsedDate = try {
+            oldFormat.parse(date)
+        } catch (e: Exception) {
+            newFormat.parse(date) ?: ""
         }
+        return newFormat.format(parsedDate).replace(", ", "T") + "Z"
     }
-}
 
-class DateUtils(private val formatter: FormatType): DateUtilities {
+    /**
+     * Saves date as a format depending on Android version
+     * */
+    override fun getCurrentDateAndTime(): String {
+        val versionCheck = Build.VERSION.SDK_INT >= VERSION_CODES.O
+        val simpleDate = SimpleDateFormat("yyyy-MM-dd, HH:mm:ss.ssssss", Locale.getDefault())
 
-    override fun getCurrentDateAndTime(): String = formatter.dateFormat().format(Date())
-    override fun formatDateAndTime(date: String): String {
-        val utcTimeZone = TimeZone.getTimeZone("UTC")
-        formatter.dateFormat().timeZone = utcTimeZone
+        return if (versionCheck) Instant.now().toString() else simpleDate.format(Date())
+    }
 
-        val currentDate = formatter.dateFormat().parse(getCurrentDateAndTime())
-        val inputDate = formatter.dateFormat().parse(date)
 
-        val calendarCurrent = Calendar.getInstance(utcTimeZone).apply { time = currentDate!! }
-        val calendarInput = Calendar.getInstance(utcTimeZone).apply { time = inputDate!! }
+    /**
+     * Takes in a date [dateAndTime] and returns a string that displays date depending on
+     * when the note was last edited or saved. If this is a a first time load from V1.0 OR is
+     * and upgrade from Android versions older than Android 8.0, the dates will be converted to a
+     * format that is compatible and replaced in the the database before being displayed on the cards
+     * */
 
-        val daysDifference = (calendarCurrent.timeInMillis - calendarInput.timeInMillis) / (24 * 60 * 60 * 1000)
-        val timeParts = date.split(", ")
+    override fun formatDateAndTime(dateAndTime: String, replaceNotesDate:(String) -> Unit): String {
+        val versionCheck = Build.VERSION.SDK_INT >= VERSION_CODES.O
 
-        return when (daysDifference.toInt()) {
-            0 -> "Today ${timeParts.last()}"
-            1 -> "Yesterday ${timeParts.last()}"
-            in 2..6 -> "${timeParts[1]} ${timeParts.last()}"
-            else -> timeParts.first()
+        return if (versionCheck) {
+            var savedDateAndTime: ZonedDateTime
+            try {
+                savedDateAndTime = Instant.parse(dateAndTime).atZone(ZoneId.systemDefault())
+            } catch (_: Exception) {
+                val convertedDate = convertOldDate(dateAndTime)
+                savedDateAndTime = Instant.parse(convertedDate).atZone(ZoneId.systemDefault())
+                replaceNotesDate(convertedDate)
+            }
+
+            val current = Instant.parse(getCurrentDateAndTime()).atZone(ZoneId.systemDefault())
+            val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd MMMM uu, EEEE, HH:mm").withZone(ZoneId.systemDefault())
+            val parseTime = formatter.format(savedDateAndTime)
+            val timeFormatted = parseTime.toString().split(", ")
+
+            when (savedDateAndTime.toLocalDateTime().until(current, ChronoUnit.DAYS).toInt()) {
+                0 -> "Today ${timeFormatted.last()}"
+                1 -> "Yesterday ${timeFormatted.last()}"
+                in 2..6 -> "${timeFormatted[1]} ${timeFormatted.last()}"
+                else -> timeFormatted.first()
+            }
+
+        } else {
+            val simpleDate = SimpleDateFormat("yyyy-MM-dd, HH:mm:ss.ssssss", Locale.getDefault())
+            val displayDateFormat = SimpleDateFormat("dd MMMM yy", Locale.getDefault())
+            val formatInput = simpleDate.parse(dateAndTime) as Date
+            return displayDateFormat.format(formatInput)
         }
     }
 

@@ -1,5 +1,7 @@
 package note.notes.savenote.Composables.Components
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -36,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,17 +46,24 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import note.notes.savenote.R
+import note.notes.savenote.ViewModelClasses.PrimaryViewModel
 
 @Composable
 fun BackupAndRestore(
+    primaryViewModel: PrimaryViewModel,
     isVisible: Boolean,
-    backUp:() -> Unit,
-    restore:() -> Unit,
     dismiss:() -> Unit
 ){
     var showMore by remember { mutableStateOf(false) }
     val interactionSource = MutableInteractionSource()
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val createBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
+            uri -> primaryViewModel.backUpNotes(uri,context)
+    }
+    val restoreBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
+            uri -> primaryViewModel.restoreNotes(uri,context)
+    }
 
     AnimatedVisibility(
         visible = isVisible,
@@ -119,8 +129,8 @@ fun BackupAndRestore(
                     )
 
                     BackupAndRestoreOptions(
-                        backUp = backUp::invoke,
-                        restore = restore::invoke
+                        backUp = { createBackup.launch("SaveNote_DB") },
+                        restore = { restoreBackup.launch(arrayOf("text/plain")) }
                     )
                 }
             }

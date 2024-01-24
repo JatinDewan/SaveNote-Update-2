@@ -46,7 +46,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
@@ -70,7 +69,7 @@ import note.notes.savenote.Composables.Components.AppBars.TopNavigationChecklist
 import note.notes.savenote.Composables.Components.CustomTextField
 import note.notes.savenote.Composables.Components.OptionMenus.MoreOptionsChecklist
 import note.notes.savenote.Composables.Components.TextFieldPlaceHolder
-import note.notes.savenote.Database.roomDatabase.CheckList
+import note.notes.savenote.PersistentStorage.roomDatabase.CheckList
 import note.notes.savenote.R
 import note.notes.savenote.Utils.Keyboard
 import note.notes.savenote.Utils.SizeUtils
@@ -84,7 +83,7 @@ import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import java.util.UUID
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChecklistComposer(
     checklistViewModel: ChecklistViewModel,
@@ -235,7 +234,7 @@ fun ChecklistComposer(
                                         if (it.isFocused) checklistViewModel.editChecklistEntry(0)
                                     },
                                 value = checklistViewModel.checklistEntry.text,
-                                onValueChange = { checklistViewModel.update(it) },
+                                onValueChange = { checklistViewModel.updateChecklistEntry(it) },
                                 maxLines = 15,
                                 onTextLayout = { coroutineScope.launch { bringIntoViewRequester.bringIntoView() } },
                                 keyboardAction = KeyboardActions(

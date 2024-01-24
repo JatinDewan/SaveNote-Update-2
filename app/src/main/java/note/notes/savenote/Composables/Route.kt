@@ -2,7 +2,6 @@ package note.notes.savenote.Composables
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseIn
-import androidx.compose.animation.core.EaseInExpo
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -18,17 +17,11 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
-import note.notes.savenote.Utils.DateUtils
 import note.notes.savenote.Utils.keyboardAsState
-import note.notes.savenote.Utils.rememberForeverLazyListState
 import note.notes.savenote.ViewModelClasses.ChecklistViewModel
 import note.notes.savenote.ViewModelClasses.NotesViewModel
 import note.notes.savenote.ViewModelClasses.PrimaryViewModel
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -38,7 +31,7 @@ fun MainComposable(
     notesViewModel: NotesViewModel = viewModel(initializer = { NotesViewModel(primaryViewModel) }),
     loaded:() -> Unit
 ) {
-    val primaryUiState by primaryViewModel.uiState.collectAsState()
+    val primaryUiState by primaryViewModel.statGetter.collectAsState()
     val notesUiState by notesViewModel.uiState.collectAsState()
     val checklistUiState by checklistViewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -46,9 +39,7 @@ fun MainComposable(
     val focusRequester = FocusRequester()
     val keyboard = keyboardAsState()
     val context = LocalContext.current
-    val collapsableNavigationBar by remember {
-        derivedStateOf { IntOffset(x = 0, y = -primaryUiState.barOffsetY.roundToInt()) }
-    }
+
     val listView by remember {
         derivedStateOf { primaryUiState.allEntries.sortedWith(primaryViewModel.compareLastEdit()) }
     }
@@ -61,20 +52,26 @@ fun MainComposable(
             initialOffsetY = { initialOffset -> initialOffset }
         )
         val pageAnimationOut = slideOutVertically(
-            animationSpec = tween(durationMillis = 200, easing = EaseInExpo),
+            animationSpec = tween(durationMillis = 300, easing = EaseIn),
             targetOffsetY = { targetOffset -> +targetOffset }
         )
 
-        AllNotesView(
-            primaryViewModel = primaryViewModel,
-            notesViewModel = notesViewModel,
-            allEntries = listView,
-            favoriteEntries = primaryUiState.favoriteEntries,
-            checklistViewModel = checklistViewModel,
-            focusRequester = focusRequester,
-            context = context,
-            focusManager = focusManager,
-            offset = collapsableNavigationBar
+        AnimatedVisibility(
+            visible = !checklistUiState.navigateNewChecklist && !notesUiState.navigateNewNote,
+            enter = pageAnimationIn,
+            exit = pageAnimationOut,
+            content = {
+                AllNotesView(
+                    primaryViewModel = primaryViewModel,
+                    notesViewModel = notesViewModel,
+                    allEntries = listView,
+                    favoriteEntries = primaryUiState.favoriteEntries,
+                    checklistViewModel = checklistViewModel,
+                    focusRequester = focusRequester,
+                    context = context,
+                    focusManager = focusManager,
+                )
+            }
         )
 
         AnimatedVisibility(
@@ -89,7 +86,6 @@ fun MainComposable(
                     focusRequester = focusRequester,
                     keyboard = keyboard,
                     context = context,
-//                    closeScreen = { checklistViewModel.openNewChecklist(false) }
                 )
             }
         )
