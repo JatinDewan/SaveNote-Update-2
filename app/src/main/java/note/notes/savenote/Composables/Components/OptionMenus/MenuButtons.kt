@@ -76,14 +76,14 @@ fun ButtonEntries(
                 backgroundColor = textBackgroundColour,
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically){
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         modifier = textBoxModifier.padding(
                             top = 5.dp, bottom = 5.dp, start = 7.dp, end = additionalTextSpacing
                         ),
                         text = stringResource(id = entryLabel),
                         color = textColour,
-                        fontSize = 14.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = UniversalFamily,
                         style = TextStyle(
@@ -145,7 +145,7 @@ fun AdditionalText(
             modifier = Modifier.padding(end = 7.dp),
             text = stringResource(id = entryLabel),
             color = textColour,
-            fontSize = 14.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             fontFamily = UniversalFamily,
             style = TextStyle(

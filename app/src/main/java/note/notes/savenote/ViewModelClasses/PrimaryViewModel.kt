@@ -1,6 +1,7 @@
 package note.notes.savenote.ViewModelClasses
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.compose.runtime.mutableStateListOf
@@ -12,7 +13,6 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,9 +47,9 @@ class PrimaryViewModel(
     private val dateUtils: DateUtilities,
 ): ViewModel() {
 
-    val stateSetter = MutableStateFlow(PrimaryUiState())
-    val statGetter: StateFlow<PrimaryUiState> = stateSetter.asStateFlow()
-    private val backupAndRestore : BackupAndRestore = BackupAndRestoreNote(viewModelScope)
+    private val stateSetter = MutableStateFlow(PrimaryUiState())
+    val stateGetter: StateFlow<PrimaryUiState> = stateSetter.asStateFlow()
+    private val backupAndRestore : BackupAndRestore = BackupAndRestoreNote()
     val temporaryEntryHold = mutableStateListOf<Note>()
     var isReady = false
 
@@ -57,21 +57,41 @@ class PrimaryViewModel(
         updateList()
     }
 
-    private fun updateState(
-        dispatcher:CoroutineDispatcher = Dispatchers.Default,
-        primaryUiStates: (PrimaryUiState) -> PrimaryUiState
-    ) {
-        viewModelScope.launch(dispatcher) {
-            stateSetter.update { updateParameter -> primaryUiStates(updateParameter) }
+    private fun showSearchBar(showSearchBar: Boolean) = viewModelScope.launch {
+        stateSetter.update { updatedState -> updatedState.copy(showSearchBar = showSearchBar) }
+    }
+
+    fun confirmDelete(confirmDelete: Boolean) = viewModelScope.launch {
+        stateSetter.update { updatedState -> updatedState.copy(confirmDelete = confirmDelete) }
+    }
+
+    fun newEntryButton(collapseNewEntry: Boolean = false) = viewModelScope.launch {
+        stateSetter.update { updatedState -> updatedState.copy(newEntryButton = collapseNewEntry) }
+    }
+
+    fun dropDown(dropDown: Boolean) = viewModelScope.launch {
+        stateSetter.update { updatedState -> updatedState.copy(dropDown = dropDown) }
+    }
+
+    private fun loadingScreen(showLoadingScreen: Boolean) = viewModelScope.launch {
+        stateSetter.update { updatedState -> updatedState.copy(loadingScreen = showLoadingScreen) }
+    }
+
+    private fun showBackup(showBackup: Boolean) = viewModelScope.launch {
+        stateSetter.update { updatedState -> updatedState.copy(showBackup = showBackup) }
+    }
+
+    private fun layoutInformation() = viewModelScope.launch(Dispatchers.IO) {
+        sharedPref.getLayoutInformation.collect { layoutInformation ->
+            stateSetter.update { updatedState -> updatedState.copy(layoutView = layoutInformation) }
         }
     }
-    private fun showSearchBar(show: Boolean) = updateState { it.copy(showSearchBar = show) }
 
-    fun confirmDelete(confirmDelete: Boolean) = updateState { it.copy(confirmDelete = confirmDelete) }
-
-    fun newEntryButton(collapse: Boolean = false) = updateState { it.copy(newEntryButton = collapse) }
-
-    fun dropDown(dropDown: Boolean) = updateState { it.copy(dropDown = dropDown) }
+    private fun sortByView() = viewModelScope.launch(Dispatchers.IO) {
+        sharedPref.getSortByView.collect { sortByView ->
+            stateSetter.update { updatedState -> updatedState.copy(sortByView = sortByView) }
+        }
+    }
 
     private fun currentDateAndTime(): String = dateUtils.getCurrentDateAndTime()
 
@@ -82,13 +102,15 @@ class PrimaryViewModel(
     fun help(context: Context) = getHelp.getHelp(context)
 
     fun processSearchRequest(searchQuery: String){
-        stateSetter.update { it.copy(searchQuery = searchQuery) }
+        stateSetter.update { updateState -> updateState.copy(searchQuery = searchQuery) }
         updateSearchRequest()
     }
 
-    fun showBackup(showBackup: Boolean){
-        dropDown(false)
-        updateState { it.copy(showBackup = showBackup) }
+    fun backup(showBackup: Boolean){
+        viewModelScope.launch {
+            dropDown(false).join()
+            showBackup(showBackup)
+        }
     }
 
     fun dateAndTimeDisplay(dateAndTime: String, note: Note): String {
@@ -111,20 +133,21 @@ class PrimaryViewModel(
         )
     }
 
-    fun insertNote(
-        navigateToNote:(Note) -> Unit
-    ){
+    fun insertNote(navigateToNote:(Note) -> Unit) {
         val emptyNote = Note(date = currentDateAndTime())
         viewModelScope.launch(Dispatchers.IO){
             notesRepositoryImp.insertNote(emptyNote)
-
             notesRepositoryImp.getNote().collect {
                 if(it.isNotEmpty()) {
                     if(
                         it.last().note.isNullOrEmpty() &&
                         it.last().header.isNullOrEmpty() &&
                         it.last().checkList.isNullOrEmpty()
-                    )   navigateToNote(it.last())
+                    ){
+                        navigateToNote(it.last())
+                        withContext(Dispatchers.Main){ newEntryButton() }
+
+                    }
                 }
             }
         }
@@ -153,26 +176,24 @@ class PrimaryViewModel(
     }
 
     fun cardFunctionSelection(navigateEntry:() -> Unit, note: Note) {
-        viewModelScope.launch{ if (temporaryEntryHold.isEmpty()) navigateEntry() else deleteTally(note) }
+        viewModelScope.launch(Dispatchers.Main){ if (temporaryEntryHold.isEmpty()) navigateEntry() else deleteTally(note) }
     }
 
     fun selectLayout(page: Boolean){
         viewModelScope.launch(Dispatchers.IO) {
             sharedPref.setLayoutInformation(!page)
-            sharedPref.getLayoutInformation.collect { currentPage ->
-                stateSetter.update { it.copy(currentPage = currentPage) }
-            }
+            layoutInformation()
         }
     }
 
-    fun updateSearchRequest() {
+    private fun updateSearchRequest() {
         val searchNotes : NotesSearch = SearchNotes()
         viewModelScope.launch {
             stateSetter.update {
                 updateParameter -> updateParameter.copy(
                     searchEntries = searchNotes.searchAllNotes(
-                        searchNotes = statGetter.value.allEntries + statGetter.value.favoriteEntries,
-                        searchQuery = statGetter.value.searchQuery
+                        searchNotes = stateGetter.value.allEntries + stateGetter.value.favoriteEntries,
+                        searchQuery = stateGetter.value.searchQuery
                     )
                 )
             }
@@ -183,7 +204,7 @@ class PrimaryViewModel(
         viewModelScope.launch{
             dropDown(false)
             showSearchBar(true)
-            delay(50)
+            delay(150)
             focusRequester.requestFocus()
         }
     }
@@ -195,19 +216,15 @@ class PrimaryViewModel(
     }
 
     fun selectAllNotes() {
-        viewModelScope.launch{
-            when {
-                temporaryEntryHold.containsAll(
-                    statGetter.value.allEntries + statGetter.value.favoriteEntries
-                ) -> temporaryEntryHold.clear()
-                else -> {
-                    statGetter.value.allEntries.map {
-                        if (it !in temporaryEntryHold) temporaryEntryHold.add(it)
+        viewModelScope.launch {
+            if(temporaryEntryHold.size < (stateGetter.value.allEntries + stateGetter.value.favoriteEntries).size) {
+                temporaryEntryHold.addAll(
+                    stateGetter.value.allEntries + stateGetter.value.favoriteEntries.filter { note ->
+                        note !in temporaryEntryHold
                     }
-                    statGetter.value.favoriteEntries.map {
-                        if(it !in temporaryEntryHold) temporaryEntryHold.add(it)
-                    }
-                }
+                )
+            } else {
+                temporaryEntryHold.clear()
             }
         }
     }
@@ -224,14 +241,16 @@ class PrimaryViewModel(
                     category = note.category
                 )
             }
-            notesRepositoryImp.insertAll(newList)
+            withContext(Dispatchers.IO){
+                notesRepositoryImp.insertAll(newList)
+            }
             temporaryEntryHold.clear()
         }
     }
 
 
     fun deleteTally(note: Note) {
-        viewModelScope.launch{
+        viewModelScope.launch {
             if (temporaryEntryHold.contains(note)) {
                 temporaryEntryHold.remove(note)
             } else {
@@ -242,12 +261,14 @@ class PrimaryViewModel(
 
     fun deleteSelected() {
         viewModelScope.launch {
-            notesRepositoryImp.deleteSelected(temporaryEntryHold)
+            withContext(Dispatchers.IO){
+                notesRepositoryImp.deleteSelected(temporaryEntryHold)
+            }
             temporaryEntryHold.clear()
         }
     }
     fun sortByString(): Int{
-        return when(statGetter.value.sortByView) {
+        return when(stateGetter.value.sortByView) {
             1 -> R.string.LastEdit
             2 -> R.string.Oldest
             else -> R.string.Newest
@@ -257,9 +278,7 @@ class PrimaryViewModel(
     fun updateSortByPreference(changeView: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             sharedPref.setSortByView(if(changeView > 2) 1 else changeView + 1)
-            sharedPref.getSortByView.collect { sortByView ->
-                stateSetter.update { view -> view.copy(sortByView = sortByView) }
-            }
+            sortByView()
         }
     }
 
@@ -271,22 +290,31 @@ class PrimaryViewModel(
         }
     }
 
+    fun rateApp(context: Context){
+        val uri = Uri.parse("https://play.google.com/store/apps/details?id=note.notes.savenote")
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        context.startActivity(intent)
+    }
+
     fun favouriteSelected(category: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        val selectFavourites = viewModelScope.launch(Dispatchers.IO) {
             temporaryEntryHold.map { note ->
                 notesRepositoryImp.updateCategory(
                     category = isCategory(note.category,category),
                     uid = note.uid
                 )
             }
-            delay(10)
+        }
+
+        viewModelScope.launch {
+            selectFavourites.join()
             temporaryEntryHold.clear()
         }
     }
 
     fun compareLastEdit(): Comparator<Note> {
         val sortByDate = SimpleDateFormat("dd MMMM yy, EEEE, HH:mm", Locale.getDefault())
-        return when (statGetter.value.sortByView) {
+        return when (stateGetter.value.sortByView) {
             1 -> compareBy<Note> { note ->
                 if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     Instant.parse(note.date).atZone(ZoneId.systemDefault())
@@ -300,61 +328,76 @@ class PrimaryViewModel(
     }
 
     private fun updateList() {
-
-        val fillList = viewModelScope.launch {
-            withContext(Dispatchers.IO){
-                notesRepositoryImp.getNote().collect { note ->
-                    withContext(Dispatchers.Default) {
-                        stateSetter.update { filterList ->
-                            filterList.copy(
-                                allEntries = note.filter { entry -> entry.category == null },
-                                favoriteEntries = note.filter { entry -> entry.category != null }
-                            )
-                        }
+        val fillList = viewModelScope.launch(Dispatchers.IO) {
+            notesRepositoryImp.getNote().collect { note ->
+                withContext(Dispatchers.Default) {
+                    stateSetter.update { filterList ->
+                        filterList.copy(
+                            allEntries = note.filter { entry -> entry.category == null },
+                            favoriteEntries = note.filter { entry -> entry.category != null }
+                        )
                     }
                 }
             }
         }
 
-        val setMainPageLayout = viewModelScope.launch(Dispatchers.IO) {
-            sharedPref.getLayoutInformation.collect { currentPage ->
-                updateState { it.copy(currentPage = currentPage) }
+        val sort = viewModelScope.launch(Dispatchers.IO) {
+            sharedPref.getSortByView.collect { sortByView ->
+                stateSetter.update { updatedState -> updatedState.copy(sortByView = sortByView) }
             }
         }
 
-        val setSortByOption = viewModelScope.launch {
-            sharedPref.getSortByView.collect { view ->
-                updateState { it.copy(sortByView = view) }
+        val layout = viewModelScope.launch(Dispatchers.IO) {
+            sharedPref.getLayoutInformation.collect { layoutInformation ->
+                stateSetter.update { updatedState -> updatedState.copy(layoutView = layoutInformation) }
             }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch  {
             fillList.join()
-            setMainPageLayout.join()
-            setSortByOption.join()
-            isReady = true
+            sort.join()
+            layout.join()
         }
+        isReady = true
     }
 
-    fun backUpNotes(uri: Uri?, context: Context){
+    fun backUpNotes(uri: Uri?, context: Context) {
         if (uri != null) {
-            backupAndRestore.backUp(
-                uri = uri,
-                context = context,
-                noteEntries = statGetter.value.allEntries + statGetter.value.favoriteEntries
-            )
+            val backUp = viewModelScope.launch {
+                backupAndRestore.backUp(
+                    uri = uri,
+                    context = context,
+                    noteEntries = stateGetter.value.allEntries + stateGetter.value.favoriteEntries
+                )
+            }
+
+            viewModelScope.launch{
+                loadingScreen(true).join()
+                showBackup(false).join()
+                backUp.join()
+                loadingScreen(false).join()
+            }
         }
     }
 
     fun restoreNotes(uri: Uri?, context: Context) {
         if (uri != null) {
-            val restore = backupAndRestore.restore(
-                uri = uri,
-                context = context,
-                noteEntries = statGetter.value.allEntries + statGetter.value.favoriteEntries
-            )
-            viewModelScope.launch(Dispatchers.IO){
-                notesRepositoryImp.insertAll(restore)
+            val restore = viewModelScope.launch {
+                backupAndRestore.restore(
+                    uri = uri,
+                    context = context,
+                    noteEntries = stateGetter.value.allEntries + stateGetter.value.favoriteEntries
+                )
+            }
+
+            viewModelScope.launch(Dispatchers.Main) {
+                loadingScreen(true).join()
+                showBackup(false).join()
+                restore.join()
+                withContext(Dispatchers.IO) {
+                    notesRepositoryImp.insertAll(backupAndRestore.restoreNotes)
+                }
+                loadingScreen(false)
             }
         }
     }

@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import note.notes.savenote.PersistentStorage.roomDatabase.Note
-import note.notes.savenote.Utils.CheckStringUtil
 
 class NotesViewModel(
     private val primaryViewModel: PrimaryViewModel,
@@ -24,7 +23,7 @@ class NotesViewModel(
 
     private val _uiState = MutableStateFlow(NotesUiState())
     val uiState: StateFlow<NotesUiState> = _uiState.asStateFlow()
-    private val checkStringUtil = CheckStringUtil()
+//    private val checkStringUtil = CheckStringUtil()
 
     fun shareNote(): Intent {
         return Intent.createChooser(
@@ -40,8 +39,8 @@ class NotesViewModel(
         viewModelScope.launch {
             noteChecker(note)
             uid(note.uid)
-            header(checkStringUtil.replaceNull(note.header))
-            updateNoteEntry(checkStringUtil.replaceNull(note.note))
+            header(note.header)
+            updateNoteEntry(note.note ?: "")
             category(note.category)
             if(navigateToNote) openNewNote()
         }
@@ -79,7 +78,7 @@ class NotesViewModel(
         }
     }
 
-    fun clearNote(){
+    private fun clearNote(){
         viewModelScope.launch{
             _uiState.update { currentState -> currentState.copy(uid = 0, header = "") }
             updateNoteEntry("")
@@ -121,8 +120,8 @@ class NotesViewModel(
         if(headerCheck || noteCheck) {
             primaryViewModel.editNote(
                 uid = uiState.value.uid,
-                header = checkStringUtil.checkString(uiState.value.header),
-                note = checkStringUtil.checkString(noteEntry.text),
+                header = uiState.value.header,
+                note = noteEntry.text,
                 category = uiState.value.category
             )
         }
@@ -135,8 +134,8 @@ class NotesViewModel(
     fun updateNoteEntry(newEntry: String) = viewModelScope.launch{ noteEntry = TextFieldValue(newEntry) }
 
     private fun editOrDeleteNote() {
-        val headerCheck = uiState.value.fullNote?.header != checkStringUtil.checkString(uiState.value.header)
-        val noteCheck = uiState.value.fullNote?.note != checkStringUtil.checkString(noteEntry.text)
+        val headerCheck = uiState.value.fullNote?.header != uiState.value.header
+        val noteCheck = uiState.value.fullNote?.note != noteEntry.text
         when {
 
             uiState.value.header.isEmpty() && noteEntry.text.isEmpty() -> {
@@ -146,8 +145,8 @@ class NotesViewModel(
             headerCheck || noteCheck -> {
                 primaryViewModel.editNote(
                     uid = uiState.value.uid,
-                    header = checkStringUtil.checkString(uiState.value.header),
-                    note = checkStringUtil.checkString(noteEntry.text),
+                    header = uiState.value.header,
+                    note = noteEntry.text,
                     category = uiState.value.category
                 )
             }

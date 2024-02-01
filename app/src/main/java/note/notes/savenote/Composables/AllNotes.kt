@@ -7,7 +7,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -18,19 +17,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material.MaterialTheme.colors
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
@@ -44,19 +48,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
@@ -66,6 +74,7 @@ import note.notes.savenote.Composables.Components.AppBars.TopNavigationBarHome
 import note.notes.savenote.Composables.Components.BackupAndRestore
 import note.notes.savenote.Composables.Components.ConfirmDelete
 import note.notes.savenote.Composables.Components.EntryCards
+import note.notes.savenote.Composables.Components.LoadingScreen
 import note.notes.savenote.Composables.Components.OptionMenus.MoreOptionsMain
 import note.notes.savenote.Composables.Components.OptionMenus.NewEntryButton
 import note.notes.savenote.PersistentStorage.roomDatabase.Note
@@ -81,12 +90,9 @@ import kotlin.math.roundToInt
 
 
 @Composable
-fun animateOnScroll(test: Boolean, offset:State<Float>): IntOffset {
-    val animationSpec = animateFloatAsState(targetValue = offset.value,
-        label = ""
-    )
-    val animateOrState = if(!test) offset else animationSpec
-
+fun animateOnScroll(animateScroll: State<Boolean>, offset:State<Float>): IntOffset {
+    val animationSpec = animateFloatAsState(targetValue = offset.value, label = "")
+    val animateOrState = if(animateScroll.value) offset else animationSpec
     return IntOffset(x = 0, y = animateOrState.value.roundToInt())
 }
 
@@ -105,23 +111,24 @@ fun AllNotesView(
     modifier: Modifier = Modifier,
 ) {
 
-    val primaryUiState by primaryViewModel.statGetter.collectAsState()
+    val primaryUiState by primaryViewModel.stateGetter.collectAsState()
     val scaffoldState = rememberScaffoldState()
     val keyboardController = LocalSoftwareKeyboardController.current
+
     val allNotesState = rememberForeverLazyListState(key = "grid")
     val searchNotesState = rememberForeverLazyListState(key = "grid")
-    val allNotesObserver by remember { derivedStateOf { allNotesState.firstVisibleItemIndex > 1 } }
-    val searchNotesObserver by remember { derivedStateOf { searchNotesState.firstVisibleItemIndex > 1 } }
+    val allNotesObserver by remember { derivedStateOf { allNotesState.firstVisibleItemIndex > 0 } }
+    val searchNotesObserver by remember { derivedStateOf { searchNotesState.firstVisibleItemIndex > 0 } }
+
     val toolbarHeightPx = with(LocalDensity.current) { 59.dp.roundToPx().toFloat() }
     val allowAnimation = remember { mutableStateOf(false) }
     val toolbarOffsetHeightPx = remember { mutableFloatStateOf(0f) }
-
     val customNestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val delta = available.y
                 val newOffset = toolbarOffsetHeightPx.floatValue + delta
-                toolbarOffsetHeightPx.floatValue = newOffset.coerceIn(-toolbarHeightPx, 0f)
+                if(allNotesObserver) toolbarOffsetHeightPx.floatValue = newOffset.coerceIn(-toolbarHeightPx, 0f)
                 return Offset.Zero
             }
 
@@ -130,19 +137,17 @@ fun AllNotesView(
                 available: Offset,
                 source: NestedScrollSource
             ): Offset {
-                allowAnimation.value = false
-                return super.onPostScroll(consumed, available, source)
+                allowAnimation.value = true
+                 return super.onPostScroll(consumed, available, source)
             }
 
-
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                toolbarOffsetHeightPx.floatValue = if(toolbarOffsetHeightPx.floatValue >= -82.5) 0f else -165f
-                allowAnimation.value = true
+                toolbarOffsetHeightPx.floatValue = if(toolbarOffsetHeightPx.floatValue  >= -82.5 || !allNotesObserver) 0f else -165f
+                allowAnimation.value = false
                 return super.onPostFling(consumed, available)
             }
         }
     }
-
 
 //    Would be nice to add a scroll bar to show how many notes till bottom
 //    could probs also use tap to top? maybe would be nice to be dynamic, maybe after list is larger
@@ -154,7 +159,7 @@ fun AllNotesView(
             keyboardController?.hide()
             primaryViewModel.dropDown(false)
             primaryViewModel.newEntryButton()
-            primaryViewModel.showBackup(false)
+            primaryViewModel.backup(false)
         }
     )
 
@@ -167,8 +172,8 @@ fun AllNotesView(
 
             MoreOptionsMain(
                 dismiss = primaryUiState.dropDown,
-                backUp = { primaryViewModel.showBackup(true) },
-                rateApp = { println(primaryUiState.favoriteEntries.size) },
+                backUp = { primaryViewModel.backup(true) },
+                rateApp = { primaryViewModel.rateApp(context) },
                 expandedIsFalse = { primaryViewModel.dropDown(false) },
                 help = { primaryViewModel.help(context) },
                 primaryViewModel = primaryViewModel,
@@ -182,9 +187,9 @@ fun AllNotesView(
                 startSearch = { primaryViewModel.startSearch(focusRequester) },
                 endSearch = { primaryViewModel.endSearch(focusManager) },
                 moreOptions = { primaryViewModel.dropDown(!primaryUiState.dropDown) },
-                changeView = { primaryViewModel.selectLayout(primaryUiState.currentPage) },
+                changeView = { primaryViewModel.selectLayout(primaryUiState.layoutView) },
                 isMenuOpen = primaryUiState.dropDown,
-                offset = animateOnScroll(test = allowAnimation.value, offset = toolbarOffsetHeightPx)
+                offset =  animateOnScroll(animateScroll = allowAnimation, offset = toolbarOffsetHeightPx)
             )
 
             NewEntryButton(
@@ -192,7 +197,7 @@ fun AllNotesView(
                 expand = { primaryViewModel.newEntryButton(true) },
                 collapse = { primaryViewModel.newEntryButton() },
                 hideButton = !primaryUiState.showSearchBar && !primaryUiState.dropDown,
-                navigateNewChecklist = { checklistViewModel.navigateNewChecklist() },
+                navigateNewChecklist = { checklistViewModel.newChecklist() },
                 navigateNewNote = { notesViewModel.navigateNewNote() }
             )
 
@@ -208,9 +213,13 @@ fun AllNotesView(
             BackupAndRestore(
                 primaryViewModel = primaryViewModel,
                 isVisible = primaryUiState.showBackup,
-                dismiss = { primaryViewModel.showBackup(false) }
+                dismiss = { primaryViewModel.backup(false) }
             )
 
+            LoadingScreen(
+                isLoading = primaryUiState.loadingScreen,
+                message = R.string.LoadingScreenMessageMain
+            )
         }
     ){ _ ->
         Crossfade(targetState = primaryUiState.showSearchBar, label = "") { currentView ->
@@ -222,8 +231,8 @@ fun AllNotesView(
                         checklistViewModel = checklistViewModel,
                         primaryUiState = primaryUiState,
                         notesViewModel = notesViewModel,
-                        gridSize = if (primaryUiState.currentPage) 2 else 1,
-                        keyboardController = keyboardController!!
+                        keyboardController = keyboardController!!,
+                        focusManager = focusManager
                     )
                 }
                 false -> {
@@ -236,7 +245,6 @@ fun AllNotesView(
                         primaryUiState = primaryUiState,
                         notesViewModel = notesViewModel,
                         nestedScrollConnection = customNestedScrollConnection,
-                        gridSize = if (primaryUiState.currentPage) 2 else 1
                     )
                 }
             }
@@ -255,16 +263,18 @@ fun AllEntriesView(
     primaryUiState: PrimaryUiState,
     notesViewModel: NotesViewModel,
     nestedScrollConnection: NestedScrollConnection,
-    gridSize: Int
 ){
+    val gridOrientation = if(primaryUiState.layoutView) StaggeredGridItemSpan.FullLine else StaggeredGridItemSpan.SingleLane
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp - 50.dp
+
     LazyVerticalStaggeredGrid(
-        state = verticalGridState,
         modifier = Modifier
-            .animateContentSize()
             .fillMaxSize()
-            .background(MaterialTheme.colors.background)
-            .nestedScroll(nestedScrollConnection,),
-        columns = StaggeredGridCells.Fixed(gridSize),
+            .background(colors.background)
+            .animateContentSize()
+            .nestedScroll(nestedScrollConnection),
+        state = verticalGridState,
+        columns = StaggeredGridCells.Fixed(2),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalItemSpacing = 10.dp,
         contentPadding = PaddingValues(
@@ -275,13 +285,17 @@ fun AllEntriesView(
         )
     ) {
 
-        item(key = UUID.randomUUID()) { SpacerAnimation(primaryUiState = primaryUiState) }
+        item(
+            key = UUID.randomUUID(),
+            span = StaggeredGridItemSpan.FullLine,
+            content = { Spacer(modifier = Modifier.height(15.dp)) }
+        )
 
-        item(key = UUID.randomUUID()) { SpacerAnimation(primaryUiState = primaryUiState) }
 
         items(
             items = favoriteEntries,
-            key = { note -> note.uid!! }
+            key = { note -> note.uid!! },
+            span = { gridOrientation }
         ) { favoritesEntries ->
             EntryTemplate(
                 modifier = Modifier.animateItemPlacement(),
@@ -292,9 +306,22 @@ fun AllEntriesView(
             )
         }
 
+        item(
+            key = UUID.randomUUID(),
+            span = StaggeredGridItemSpan.FullLine,
+            content = {
+                PinnedDivider(
+                    modifier = Modifier.animateItemPlacement(),
+                    hasFavorites = favoriteEntries.isNotEmpty(),
+                    spacerWidth = screenWidth / 2
+                )
+            }
+        )
+
         items(
             items = allEntries,
-            key = { note -> note.uid!! }
+            key = { note -> note.uid!! },
+            span = { gridOrientation }
         ) { allEntries ->
             EntryTemplate(
                 modifier = Modifier.animateItemPlacement(),
@@ -315,27 +342,30 @@ fun SearchView(
     checklistViewModel: ChecklistViewModel,
     primaryUiState: PrimaryUiState,
     notesViewModel: NotesViewModel,
-    gridSize: Int,
-    keyboardController: SoftwareKeyboardController
+    keyboardController: SoftwareKeyboardController,
+    focusManager: FocusManager
 ){
+    val gridOrientation = if(primaryUiState.layoutView) StaggeredGridItemSpan.FullLine else StaggeredGridItemSpan.SingleLane
     val customNestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 keyboardController.hide()
+                focusManager.clearFocus()
                 return Offset.Zero
             }
         }
     }
 
     Column{
+
         LazyVerticalStaggeredGrid(
             modifier = Modifier
                 .animateContentSize()
                 .fillMaxWidth()
                 .nestedScroll(customNestedScrollConnection)
-                .background(MaterialTheme.colors.background),
+                .background(colors.background),
             state = verticalGridState,
-            columns = StaggeredGridCells.Fixed(gridSize),
+            columns = StaggeredGridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalItemSpacing = 10.dp,
             contentPadding = PaddingValues(
@@ -345,13 +375,16 @@ fun SearchView(
                 end = 10.dp
             )
         ) {
-            item(key = UUID.randomUUID()) { SpacerAnimation(primaryUiState = primaryUiState) }
-
-            item(key = UUID.randomUUID()) { SpacerAnimation(primaryUiState = primaryUiState) }
+            item(
+                key = UUID.randomUUID(),
+                span = StaggeredGridItemSpan.FullLine,
+                content = { Spacer(modifier = Modifier.height(10.dp)) }
+            )
 
             items(
                 items = primaryUiState.searchEntries,
-                key = { note -> note.uid!! }
+                key = { note -> note.uid!! },
+                span = { gridOrientation }
             ) { searchResults ->
                 EntryTemplate(
                     modifier = Modifier.animateItemPlacement(),
@@ -367,6 +400,7 @@ fun SearchView(
     }
 }
 
+@SuppressLint("UnusedContentLambdaTargetStateParameter")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EntryTemplate(
@@ -402,7 +436,7 @@ fun EntryTemplate(
                         )
                     } else {
                         primaryViewModel.cardFunctionSelection(
-                            navigateEntry = { checklistViewModel.navigateToChecklist(noteEntry,true) },
+                            navigateEntry = { checklistViewModel.editChecklist(noteEntry,true) },
                             note = noteEntry
                         )
                     }
@@ -434,7 +468,7 @@ fun NoResultsFound(
             verticalArrangement = Arrangement.Top
         ) {
             Icon(
-                tint = MaterialTheme.colors.onSecondary,
+                tint = colors.onSecondary,
                 painter = painterResource(id = R.drawable.search_lg),
                 contentDescription = stringResource(R.string.Check),
                 modifier = Modifier
@@ -448,19 +482,52 @@ fun NoResultsFound(
                 text = stringResource(id = R.string.NoMatches),
                 fontSize = 20.sp,
                 fontFamily = UniversalFamily,
-                color = MaterialTheme.colors.onSecondary,
+                color = colors.onSecondary,
             )
         }
     }
 }
 
-@SuppressLint("UnrememberedMutableState")
 @Composable
-fun SpacerAnimation(primaryUiState: PrimaryUiState) {
-    val spacerHeight by animateDpAsState(
-        targetValue = derivedStateOf { if (primaryUiState.currentPage) 10.dp else 0.dp }.value,
-        label = ""
-    )
+fun PinnedDivider(
+    hasFavorites: Boolean,
+    modifier: Modifier = Modifier,
+    spacerWidth: Dp,
+    spacerHeight: Dp = 4.dp,
+    divColour: Color = colors.onBackground
+) {
+    if(hasFavorites) {
+        Row(
+            modifier = modifier,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Surface(
+                modifier = Modifier
+                    .width(spacerWidth)
+                    .height(spacerHeight),
+                color = divColour,
+                shape = RoundedCornerShape(15.dp),
+                content = { Text(text = "") }
+            )
+            Icon(
+                modifier = Modifier
+                    .padding(3.dp)
+                    .size(13.dp)
+                    .rotate(180f),
+                painter = painterResource(id = R.drawable.pin_01 ),
+                contentDescription = stringResource(R.string.Check),
+                tint = colors.onSurface
+            )
 
-    Spacer(modifier = Modifier.height(spacerHeight))
+            Surface(
+                modifier = Modifier
+                    .width(spacerWidth)
+                    .height(spacerHeight),
+                color = divColour,
+                shape = RoundedCornerShape(15.dp),
+                content = { Text(text = "") }
+            )
+        }
+    }
 }

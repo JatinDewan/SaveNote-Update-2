@@ -1,10 +1,7 @@
 package note.notes.savenote.Composables.Components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -52,11 +49,11 @@ fun EntryCards(
     primaryViewModel: PrimaryViewModel,
     onEditClick: () -> Unit,
     onLongPress: () -> Unit,
-    note: Note,
     isSearchQuery: Boolean = false,
+    note: Note
 ) {
     val selected = primaryViewModel.temporaryEntryHold.contains(note)
-    val primaryViewState by primaryViewModel.statGetter.collectAsState()
+    val primaryViewState by primaryViewModel.stateGetter.collectAsState()
 
     val backgroundColour: Color by animateColorAsState(
         targetValue = if(selected) colors.secondaryVariant else colors.secondary,
@@ -207,8 +204,8 @@ fun CheckListDisplay(
                 horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 Icon(
-                    modifier = Modifier.size(14.dp),
-                    tint = colors.primary,
+                    modifier = Modifier.size(13.dp),
+                    tint = colors.onSecondary,
                     painter = painterResource(id = R.drawable.circle),
                     contentDescription = stringResource(R.string.Check)
                 )
@@ -270,18 +267,18 @@ fun AdditionalInformation(
                 )
             }
 
-            AnimatedVisibility(
-                visible = note.category != null,
-                enter = scaleIn(),
-                exit = scaleOut()
-            ) {
-                Icon(
-                    modifier = Modifier.size(12.dp),
-                    painter = painterResource(id = R.drawable.pin_01),
-                    contentDescription = stringResource(R.string.Check),
-                    tint = colors.onSecondary
-                )
-            }
+//            AnimatedVisibility(
+//                visible = note.category != null,
+//                enter = scaleIn(),
+//                exit = scaleOut()
+//            ) {
+//                Icon(
+//                    modifier = Modifier.size(12.dp),
+//                    painter = painterResource(id = R.drawable.pin_01),
+//                    contentDescription = stringResource(R.string.Check),
+//                    tint = colors.onSecondary
+//                )
+//            }
         }
     }
 }

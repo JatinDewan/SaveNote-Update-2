@@ -49,7 +49,7 @@ import note.notes.savenote.ui.theme.UniversalFamily
 fun BottomPopUpBar(
     primaryViewModel: PrimaryViewModel,
 ) {
-    val primaryView by primaryViewModel.stateSetter.collectAsState()
+    val primaryView by primaryViewModel.stateGetter.collectAsState()
     val checkContains by remember { derivedStateOf { primaryViewModel.temporaryEntryHold.containsAll(primaryView.allEntries + primaryView.favoriteEntries) } }
 
     val selectAllIndicator: Color by animateColorAsState(
@@ -90,7 +90,6 @@ fun BottomPopUpBar(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-
                             DeleteSelected(
                                 modifier = Modifier.weight(1f),
                                 onClick = { primaryViewModel.confirmDelete(true) },
@@ -121,7 +120,6 @@ fun BottomPopUpBar(
                         backgroundColor = colors.onBackground,
                         border = BorderStroke(1.dp, colors.onBackground)
                     ) {
-
                         PopUpBarButtons(
                             onClick = { primaryViewModel.favouriteSelected("favourite") },
                             icon = R.drawable.pin_01,

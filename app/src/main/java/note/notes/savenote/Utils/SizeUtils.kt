@@ -11,3 +11,8 @@ fun List<CheckList>.rangeFinder(maxRange: Int): List<CheckList> {
     val list = this.filter { it.strike == 0 }
     return list.subList(0,if (list.size > maxRange) maxRange else list.size)
 }
+
+fun MutableList<CheckList>.swapAll(checklist: List<CheckList>?) {
+    this.clear()
+    this.addAll(checklist ?: emptyList())
+}

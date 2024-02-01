@@ -52,14 +52,12 @@ class DateUtils : DateUtilities, OldDateConverter {
         return if (versionCheck) Instant.now().toString() else simpleDate.format(Date())
     }
 
-
     /**
      * Takes in a date [dateAndTime] and returns a string that displays date depending on
      * when the note was last edited or saved. If this is a a first time load from V1.0 OR is
      * and upgrade from Android versions older than Android 8.0, the dates will be converted to a
      * format that is compatible and replaced in the the database before being displayed on the cards
      * */
-
     override fun formatDateAndTime(dateAndTime: String, replaceNotesDate:(String) -> Unit): String {
         val versionCheck = Build.VERSION.SDK_INT >= VERSION_CODES.O
 
@@ -92,5 +90,4 @@ class DateUtils : DateUtilities, OldDateConverter {
             return displayDateFormat.format(formatInput)
         }
     }
-
 }

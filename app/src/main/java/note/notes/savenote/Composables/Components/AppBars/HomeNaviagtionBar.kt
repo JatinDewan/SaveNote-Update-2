@@ -63,7 +63,7 @@ fun TopNavigationBarHome(
     primaryViewModel: PrimaryViewModel
 ) {
 
-    val primaryUiState by primaryViewModel.stateSetter.collectAsState()
+    val primaryUiState by primaryViewModel.stateGetter.collectAsState()
 
     val animateDividerColour by animateColorAsState(
         targetValue = if(startedScrolling || isMenuOpen) colors.onBackground else colors.background,
@@ -98,27 +98,34 @@ fun TopNavigationBarHome(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 HomeNavigationHeader(
                     visibleHeader = primaryUiState.dropDown,
                     headerVisibility = !primaryUiState.showSearchBar
                 )
 
-                SearchBar(
-                    primaryViewModel = primaryViewModel,
-                    primaryUiState = primaryUiState,
-                    startSearch = startSearch::invoke,
-                    endSearch = endSearch::invoke,
-                    focusRequester = focusRequester,
-                    enabled = !primaryUiState.dropDown
-                )
+                if (primaryUiState.showSearchBar) {
+                    SearchBar(
+                        primaryViewModel = primaryViewModel,
+                        primaryUiState = primaryUiState,
+                        endSearch = endSearch::invoke,
+                        focusRequester = focusRequester
+                    )
+                }
 
                 Row(
                     modifier = Modifier.wrapContentSize(Alignment.CenterEnd, true)
                 ) {
+                    if (!primaryUiState.showSearchBar) {
+                        NavigationButtons(
+                            modifier = Modifier.width(44.dp),
+                            moreOptions = startSearch::invoke,
+                            icon = R.drawable.search_lg,
+                        )
+                    }
+
                     Crossfade(
                         animationSpec = tween(300),
-                        targetState = primaryUiState.currentPage,
+                        targetState = primaryUiState.layoutView,
                         label = ""
                     ) { targetAnimation ->
                         when (targetAnimation) {
@@ -152,6 +159,51 @@ fun TopNavigationBarHome(
 }
 
 @Composable
+fun SearchBar(
+    primaryViewModel: PrimaryViewModel,
+    primaryUiState: PrimaryUiState,
+    endSearch: () -> Unit,
+    focusRequester: FocusRequester,
+){
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        backgroundColor = colors.onBackground,
+        shape = RoundedCornerShape(15.dp),
+        elevation = 0.dp
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NavigationButtons(
+                moreOptions = endSearch::invoke,
+                icon = R.drawable.x_close
+            )
+            CustomTextField(
+                modifier = Modifier
+                    .imePadding()
+                    .focusRequester(focusRequester)
+                    .padding(end = 10.dp)
+                    .fillMaxWidth(0.80f)
+                    .animateContentSize(tween(150)),
+                value = primaryUiState.searchQuery,
+                searchIsActive = primaryUiState.showSearchBar,
+                onValueChange = { primaryViewModel.processSearchRequest(it) },
+                decorationBox = {
+                    TextFieldPlaceHolder(
+                        showPlaceHolder = primaryUiState.showSearchBar && primaryUiState.searchQuery.isEmpty() ,
+                        text = R.string.SearchNotes,
+                        fontSize = 15.sp
+                    )
+                },
+                singleLine = true,
+                fontSize = 15.sp
+            )
+        }
+    }
+}
+
+@Composable
 fun HomeNavigationHeader(
     visibleHeader: Boolean,
     headerVisibility: Boolean
@@ -176,7 +228,9 @@ fun HomeNavigationHeader(
         enter = fadeIn(tween(300)),
         exit = fadeOut(tween(0))
     ) {
-        Row (modifier = Modifier.fillMaxWidth(0.7f).padding(start = 10.dp)){
+        Row (modifier = Modifier
+            .fillMaxWidth(0.7f)
+            .padding(start = 10.dp)){
             Crossfade(
                 animationSpec = tween(durationMillis = 200),
                 targetState = visibleHeader,
@@ -204,67 +258,6 @@ fun HomeNavigationHeader(
                     else -> headerText(title = R.string.AppName)
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun SearchBar(
-    primaryViewModel: PrimaryViewModel,
-    primaryUiState: PrimaryUiState,
-    startSearch: () -> Unit,
-    endSearch: () -> Unit,
-    focusRequester: FocusRequester,
-    enabled: Boolean
-){
-
-    Card(
-        modifier = Modifier.padding(start = 5.dp),
-        backgroundColor = if(primaryUiState.showSearchBar) colors.onBackground else colors.background,
-        shape = RoundedCornerShape(15.dp),
-        elevation = 0.dp
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-
-            when(primaryUiState.showSearchBar){
-                true -> {
-                    NavigationButtons(
-                        moreOptions = endSearch::invoke,
-                        icon = R.drawable.x_close
-                    )
-                }
-                else -> {
-                    NavigationButtons(
-                        moreOptions = startSearch::invoke,
-                        icon = R.drawable.search_lg,
-                        enabled = enabled
-                    )
-                }
-            }
-
-            CustomTextField(
-                modifier = Modifier
-                    .imePadding()
-                    .focusRequester(focusRequester)
-                    .padding(end = 10.dp)
-                    .fillMaxWidth(0.75f)
-                    .animateContentSize(tween(150)),
-                value = primaryUiState.searchQuery,
-                searchIsActive = primaryUiState.showSearchBar,
-                onValueChange = { primaryViewModel.processSearchRequest(it) },
-                decorationBox = {
-                    TextFieldPlaceHolder(
-                        showPlaceHolder = primaryUiState.showSearchBar && primaryUiState.searchQuery.isEmpty() ,
-                        text = R.string.SearchNotes,
-                        fontSize = 15.sp
-                    )
-                },
-                singleLine = true,
-                fontSize = 15.sp
-            )
         }
     }
 }

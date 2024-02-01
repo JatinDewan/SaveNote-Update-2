@@ -18,11 +18,9 @@ private val DarkColorPalette = darkColors(
     onError = Warning,
     onBackground = PrimaryFaded,
     secondaryVariant = SecondaryVariant
-
 )
 
 private val LightColorPalette = lightColors(
-
     background = Primary,
     secondary = Secondary,
     primary = Highlight,
@@ -33,7 +31,6 @@ private val LightColorPalette = lightColors(
     onError = Warning,
     onBackground = PrimaryFaded,
     secondaryVariant = SecondaryVariant
-
 )
 
 val Highlight1 = Color(0xFFda9642)

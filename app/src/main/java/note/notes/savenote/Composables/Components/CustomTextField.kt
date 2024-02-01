@@ -26,12 +26,12 @@ fun CustomTextField(
     decorationBox: @Composable () -> Unit,
     keyboardAction: KeyboardActions = KeyboardActions(),
     keyboardOptions: KeyboardOptions = KeyboardOptions(),
-    onTextLayout:(TextLayoutResult) -> Unit = { },
+    onTextLayout:(TextLayoutResult) -> Unit = { /*TODO()*/ },
     singleLine: Boolean = false,
     maxLines: Int = 1000,
     fontSize: TextUnit = 15.sp,
     fontWeight: FontWeight = FontWeight.Normal,
-    textColour: Color = colors.surface
+    textColour: Color = colors.primaryVariant
 ){
     BasicTextField(
         modifier = modifier,

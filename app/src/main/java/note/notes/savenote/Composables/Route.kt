@@ -5,8 +5,11 @@ import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -23,7 +26,7 @@ import note.notes.savenote.ViewModelClasses.ChecklistViewModel
 import note.notes.savenote.ViewModelClasses.NotesViewModel
 import note.notes.savenote.ViewModelClasses.PrimaryViewModel
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun MainComposable(
     primaryViewModel: PrimaryViewModel = viewModel(factory = PrimaryViewModel.Factory),
@@ -31,80 +34,85 @@ fun MainComposable(
     notesViewModel: NotesViewModel = viewModel(initializer = { NotesViewModel(primaryViewModel) }),
     loaded:() -> Unit
 ) {
-    val primaryUiState by primaryViewModel.statGetter.collectAsState()
+    val primaryUiState by primaryViewModel.stateGetter.collectAsState()
     val notesUiState by notesViewModel.uiState.collectAsState()
-    val checklistUiState by checklistViewModel.uiState.collectAsState()
+    val checklistUiState by checklistViewModel.stateGetter.collectAsState()
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
-    val focusRequester = FocusRequester()
+    val focusRequester = remember { FocusRequester() }
     val keyboard = keyboardAsState()
     val context = LocalContext.current
 
-    val listView by remember {
+    val listView = remember {
         derivedStateOf { primaryUiState.allEntries.sortedWith(primaryViewModel.compareLastEdit()) }
+    }
+
+    val sortFave = remember {
+        derivedStateOf { primaryUiState.favoriteEntries.sortedWith(primaryViewModel.compareLastEdit()) }
     }
 
     LaunchedEffect(primaryViewModel.isReady) { loaded() }
 
-    BoxWithConstraints {
-        val pageAnimationIn = slideInVertically(
-            animationSpec =  tween(durationMillis = 300, easing = EaseIn),
-            initialOffsetY = { initialOffset -> initialOffset }
-        )
-        val pageAnimationOut = slideOutVertically(
-            animationSpec = tween(durationMillis = 300, easing = EaseIn),
-            targetOffsetY = { targetOffset -> +targetOffset }
-        )
+    CompositionLocalProvider(LocalOverscrollConfiguration provides null){
+        BoxWithConstraints {
+            val pageAnimationIn = slideInVertically(
+                animationSpec = tween(durationMillis = 300, easing = EaseIn),
+                initialOffsetY = { initialOffset -> initialOffset }
+            )
+            val pageAnimationOut = slideOutVertically(
+                animationSpec = tween(durationMillis = 300, easing = EaseIn),
+                targetOffsetY = { targetOffset -> +targetOffset }
+            )
 
-        AnimatedVisibility(
-            visible = !checklistUiState.navigateNewChecklist && !notesUiState.navigateNewNote,
-            enter = pageAnimationIn,
-            exit = pageAnimationOut,
-            content = {
-                AllNotesView(
-                    primaryViewModel = primaryViewModel,
-                    notesViewModel = notesViewModel,
-                    allEntries = listView,
-                    favoriteEntries = primaryUiState.favoriteEntries,
-                    checklistViewModel = checklistViewModel,
-                    focusRequester = focusRequester,
-                    context = context,
-                    focusManager = focusManager,
-                )
-            }
-        )
+            AnimatedVisibility(
+                visible = !checklistUiState.navigateNewChecklist && !notesUiState.navigateNewNote,
+                enter = pageAnimationIn,
+                exit = pageAnimationOut,
+                content = {
+                    AllNotesView(
+                        primaryViewModel = primaryViewModel,
+                        notesViewModel = notesViewModel,
+                        allEntries = listView.value,
+                        favoriteEntries = sortFave.value,
+                        checklistViewModel = checklistViewModel,
+                        focusRequester = focusRequester,
+                        context = context,
+                        focusManager = focusManager,
+                    )
+                }
+            )
 
-        AnimatedVisibility(
-            visible = checklistUiState.navigateNewChecklist,
-            enter = pageAnimationIn,
-            exit = pageAnimationOut,
-            content = {
-                ChecklistComposer(
-                    coroutineScope = scope,
-                    focusManager = focusManager,
-                    checklistViewModel = checklistViewModel,
-                    focusRequester = focusRequester,
-                    keyboard = keyboard,
-                    context = context,
-                )
-            }
-        )
+            AnimatedVisibility(
+                visible = checklistUiState.navigateNewChecklist,
+                enter = pageAnimationIn,
+                exit = pageAnimationOut,
+                content = {
+                    ChecklistComposer(
+                        focusManager = focusManager,
+                        checklistViewModel = checklistViewModel,
+                        focusRequester = focusRequester,
+                        keyboard = keyboard,
+                        context = context
+                    )
+                }
+            )
 
-        AnimatedVisibility(
-            visible = notesUiState.navigateNewNote,
-            enter = pageAnimationIn,
-            exit = pageAnimationOut,
-            content = {
-                NoteComposer(
-                    notesViewModel = notesViewModel,
-                    focusRequester = focusRequester,
-                    coroutineScope = scope,
-                    focusManager = focusManager,
-                    context = context,
-                    keyboard = keyboard,
-                    closeScreen = { notesViewModel.openNewNote(false) }
-                )
-            }
-        )
+            AnimatedVisibility(
+                visible = notesUiState.navigateNewNote,
+                enter = pageAnimationIn,
+                exit = pageAnimationOut,
+                content = {
+                    NoteComposer(
+                        notesViewModel = notesViewModel,
+                        focusRequester = focusRequester,
+                        coroutineScope = scope,
+                        focusManager = focusManager,
+                        context = context,
+                        keyboard = keyboard,
+                        closeScreen = { notesViewModel.openNewNote(false) }
+                    )
+                }
+            )
+        }
     }
 }

@@ -44,4 +44,5 @@
     <string name="RestoreStep4">If you have not already deleted the backup file, make sure to delete it once you are done with the restore process. This will help prevent any potential security issues or data loss.</string>
     <string name="BackupInfo">SaveNote includes a useful feature called "Backup," which allows you to create a copy of all your notes and save them to a file. This file can be used to transfer your notes to another device or to restore them to your current device if you ever experience data loss or device failure.</string>
     <string name="InstructionsOrder">%s. </string>
+    <string name="LoadingScreenMessageMain">Processing</string>
 </resources>

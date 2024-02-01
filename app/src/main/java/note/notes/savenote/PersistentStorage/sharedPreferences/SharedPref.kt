@@ -16,9 +16,11 @@ interface ISharedPreferences{
     val getLayoutInformation: Flow<Boolean>
 
     val getSortByView: Flow<Int>
+
     suspend fun setCompletedChecklistLayout(showCompleted: Boolean)
     suspend fun setLayoutInformation(setLayout: Boolean)
     suspend fun setSortByView(view: Int)
+
 }
 class SharedPref(private val context: Context): ISharedPreferences {
     companion object{
@@ -42,6 +44,7 @@ class SharedPref(private val context: Context): ISharedPreferences {
         get() = context.datastore.data.map {
             preferences -> preferences[SORT_BY_VIEW] ?: 0
         }
+
 
     override suspend fun setCompletedChecklistLayout(showCompleted: Boolean) {
         context.datastore.edit{

@@ -25,7 +25,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import note.notes.savenote.R
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun NewEntryButton (
     dismiss: Boolean,
@@ -44,7 +43,7 @@ fun NewEntryButton (
             if(hideButton){
                 Column(
                     horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     ButtonEntries(
                         buttonFunction = navigateNewChecklist::invoke,
@@ -52,7 +51,9 @@ fun NewEntryButton (
                         entryIcon = R.drawable.dotpoints_01,
                         dismiss = dismiss,
                         animationDelay = 200,
-                        textColour = colors.background
+                        textColour = colors.background,
+                        padding = 9.dp
+
                     )
 
                     ButtonEntries(
@@ -61,26 +62,21 @@ fun NewEntryButton (
                         entryIcon = R.drawable.pencil_line,
                         dismiss = dismiss,
                         animationDelay = 100,
-                        textColour = colors.background
+                        textColour = colors.background,
+                        padding = 9.dp
                     )
 
-                    Card(
-                        shape = RoundedCornerShape(15.dp),
-                        modifier = Modifier.size(60.dp),
-                        onClick = { if (!dismiss) expand() else collapse() }
-                    ) {
-                        RotatingNewEntryIcon(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .size(60.dp)
-                                .padding(10.dp),
-                            icon = R.drawable.plus,
-                            boolean = dismiss,
-                            dismiss = dismiss,
-                            expand = expand::invoke,
-                            collapse = collapse::invoke
-                        )
-                    }
+                    RotatingNewEntryIcon(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .size(60.dp)
+                            .padding(10.dp),
+                        icon = R.drawable.plus,
+                        boolean = dismiss,
+                        dismiss = dismiss,
+                        expand = expand::invoke,
+                        collapse = collapse::invoke
+                    )
                 }
             }
         }
@@ -99,8 +95,8 @@ fun RotatingNewEntryIcon(
 ) {
     val rotation = remember { Animatable(0f) }
     val backgroundColour: Color by animateColorAsState(
-        targetValue = if(!dismiss) colors.primary else colors.onSecondary,
-        animationSpec = tween(100),
+        targetValue = if(dismiss) colors.onSecondary else colors.primary,
+        animationSpec = tween(500),
         label = ""
     )
 
@@ -124,12 +120,12 @@ fun RotatingNewEntryIcon(
     Card(
         shape = RoundedCornerShape(15.dp),
         backgroundColor = backgroundColour,
-        modifier = Modifier.size(60.dp),
+        modifier = Modifier.size(55.dp),
         onClick = { if (!dismiss) expand() else collapse() }
     ) {
         Icon(
             painter = painterResource(id = icon),
-            tint = colors.background,
+            tint = if(dismiss) colors.background else colors.secondary,
             contentDescription = null,
             modifier = modifier.rotate(rotation.value)
         )

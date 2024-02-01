@@ -11,10 +11,11 @@ data class PrimaryUiState (
     val showSearchBar: Boolean = false,
     val newEntryButton: Boolean = false,
     val confirmDelete: Boolean = false,
-    val currentPage: Boolean = true,
+    val layoutView: Boolean = true,
     val showBackup: Boolean = false,
     val dropDown: Boolean = false,
+    val loadingScreen: Boolean = false,
     val sortByView: Int = 0,
     val barOffsetY: Float = 0f,
-    val searchQuery: String = "",
+    val searchQuery: String = ""
 )
