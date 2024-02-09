@@ -16,6 +16,7 @@ data class PrimaryUiState (
     val dropDown: Boolean = false,
     val loadingScreen: Boolean = false,
     val sortByView: Int = 0,
+    val setTheme: Int = 1,
     val barOffsetY: Float = 0f,
     val searchQuery: String = ""
 )

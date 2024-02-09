@@ -144,6 +144,7 @@ fun MoreOptionsMain(
     dismiss: Boolean,
     backUp:() -> Unit,
     rateApp:() -> Unit,
+    themeBy:() -> Unit,
     expandedIsFalse:() -> Unit,
     help:() -> Unit,
     sortBy:() -> Unit,
@@ -180,11 +181,26 @@ fun MoreOptionsMain(
                 )
 
                 ButtonEntries(
+                    buttonFunction = themeBy::invoke,
+                    entryLabel = R.string.Theme,
+                    entryIcon = R.drawable.paint,
+                    dismiss = dismiss,
+                    animationDelay = 150,
+                    padding = menuPadding,
+                    textChangeCondition = primaryUiState.setTheme,
+                    additionalText = primaryViewModel.chooseTheme(),
+                    iconBackgroundColour = iconBackgroundColour,
+                    textBackgroundColour = textBackgroundColour,
+                    textColour = colors.onSecondary,
+                    additionalTextSpacing = 4.dp
+                )
+
+                ButtonEntries(
                     buttonFunction = backUp::invoke,
                     entryLabel = R.string.BackUp,
                     entryIcon = R.drawable.server_01,
                     dismiss = dismiss,
-                    animationDelay = 150,
+                    animationDelay = 200,
                     padding = menuPadding,
                     iconBackgroundColour = iconBackgroundColour,
                     textBackgroundColour = textBackgroundColour,
@@ -196,7 +212,7 @@ fun MoreOptionsMain(
                     entryLabel = R.string.RateApp,
                     entryIcon = R.drawable.thumbs_up,
                     dismiss = dismiss,
-                    animationDelay = 200,
+                    animationDelay = 250,
                     padding = menuPadding,
                     iconBackgroundColour = iconBackgroundColour,
                     textBackgroundColour = textBackgroundColour,
@@ -208,7 +224,7 @@ fun MoreOptionsMain(
                     entryLabel = R.string.Help,
                     entryIcon = R.drawable.help_circle,
                     dismiss = dismiss,
-                    animationDelay = 250,
+                    animationDelay = 300,
                     padding = menuPadding,
                     iconBackgroundColour = iconBackgroundColour,
                     textBackgroundColour = textBackgroundColour,

@@ -1,11 +1,8 @@
 package note.notes.savenote.Utils
 
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import note.notes.savenote.PersistentStorage.roomDatabase.CheckList
-
-class SizeUtils {
-    fun DPISelection(boolean: Boolean, dpFirst: Dp, dpSecond: Dp) = if (boolean) dpFirst else dpSecond
-}
 
 fun List<CheckList>.rangeFinder(maxRange: Int): List<CheckList> {
     val list = this.filter { it.strike == 0 }
@@ -15,4 +12,8 @@ fun List<CheckList>.rangeFinder(maxRange: Int): List<CheckList> {
 fun MutableList<CheckList>.swapAll(checklist: List<CheckList>?) {
     this.clear()
     this.addAll(checklist ?: emptyList())
+}
+
+fun Modifier.conditional(allowModifier: Boolean, modifier: (Modifier) -> Modifier): Modifier {
+    return if(allowModifier) modifier(this) else Modifier
 }

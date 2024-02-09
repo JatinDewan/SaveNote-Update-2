@@ -4,6 +4,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface NotesRepository {
 
+//    suspend fun getNote(category: String?): Flow<List<Note>>
+
     suspend fun getNote(): Flow<List<Note>>
 
     suspend fun insertNote(notes: Note)
@@ -21,6 +23,10 @@ interface NotesRepository {
 }
 
 class NotesRepositoryImp (private val notesDao: NoteDao) : NotesRepository {
+
+//    override suspend fun getNote(category: String?): Flow<List<Note>> {
+//        return notesDao.getAll(category)
+//    }
 
     override suspend fun getNote(): Flow<List<Note>> {
         return notesDao.getAll()

@@ -24,7 +24,7 @@ fun OptionMenuContainer(
         if (dismiss){
             Box(
                 modifier = Modifier
-                    .background(MaterialTheme.colors.background.copy(alpha = 0.9f))
+                    .background(MaterialTheme.colors.background.copy(alpha = 0.8f))
                     .fillMaxSize()
                     .pointerInput(Unit) { detectTapGestures(onPress = { expandedIsFalse(); additionalDismissFunction() }) }
             )

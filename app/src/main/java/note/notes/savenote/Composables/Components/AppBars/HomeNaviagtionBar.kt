@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import note.notes.savenote.Composables.Components.CustomTextField
@@ -79,18 +79,17 @@ fun TopNavigationBarHome(
     Card(
         modifier = Modifier
             .absoluteOffset { offset }
-            .height(60.dp)
+            .height(61.dp)
             .fillMaxWidth(),
-        elevation = if (startedScrolling) 10.dp else 0.dp,
+        elevation = if (startedScrolling) 20.dp else 0.dp,
         backgroundColor = colors.background,
         shape = RoundedCornerShape(0)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Divider(color = animateDividerColour)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -153,7 +152,8 @@ fun TopNavigationBarHome(
                     )
                 }
             }
-            Divider(color = animateDividerColour)
+//            Spacer(modifier = Modifier.fillMaxHeight())
+            Divider(color = animateDividerColour, thickness = 2.dp)
         }
     }
 }
@@ -181,7 +181,6 @@ fun SearchBar(
             )
             CustomTextField(
                 modifier = Modifier
-                    .imePadding()
                     .focusRequester(focusRequester)
                     .padding(end = 10.dp)
                     .fillMaxWidth(0.80f)
@@ -191,38 +190,45 @@ fun SearchBar(
                 onValueChange = { primaryViewModel.processSearchRequest(it) },
                 decorationBox = {
                     TextFieldPlaceHolder(
-                        showPlaceHolder = primaryUiState.showSearchBar && primaryUiState.searchQuery.isEmpty() ,
+                        showPlaceHolder = primaryUiState.searchQuery.isEmpty() ,
                         text = R.string.SearchNotes,
-                        fontSize = 15.sp
+                        fontSize = 15.sp,
+                        colour = colors.onSurface
                     )
                 },
                 singleLine = true,
-                fontSize = 15.sp
+                fontSize = 15.sp,
+                textColour = colors.primaryVariant
             )
         }
     }
 }
 
 @Composable
+fun HeaderText(
+    modifier: Modifier = Modifier,
+    title: Any,
+    color: Color = colors.onSecondary,
+    fontSize: TextUnit = 20.sp,
+    fontWeight: FontWeight = FontWeight.SemiBold
+){
+    Text(
+        modifier = modifier,
+        text = if(title is Int) stringResource(id = title) else title as String,
+        color = color,
+        fontSize = fontSize,
+        fontWeight = fontWeight,
+        fontFamily = UniversalFamily,
+        textAlign = TextAlign.Start
+
+    )
+}
+
+@Composable
 fun HomeNavigationHeader(
     visibleHeader: Boolean,
-    headerVisibility: Boolean
+    headerVisibility: Boolean,
 ) {
-
-    @Composable
-    fun headerText(modifier: Modifier = Modifier, title: Int, color: Color = colors.onSecondary){
-        Text(
-            modifier = modifier,
-            text = stringResource(id = title),
-            color = color,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold,
-            fontFamily = UniversalFamily,
-            textAlign = TextAlign.Start
-
-        )
-    }
-
     AnimatedVisibility(
         visible = headerVisibility,
         enter = fadeIn(tween(300)),
@@ -248,14 +254,14 @@ fun HomeNavigationHeader(
                                 contentDescription = stringResource(R.string.DeleteNote),
                                 tint = colors.primary
                             )
-                            headerText(
+                            HeaderText(
                                 title = R.string.Menu,
                                 color = colors.onSecondary,
                             )
                         }
                     }
 
-                    else -> headerText(title = R.string.AppName)
+                    else -> HeaderText(title = R.string.AppName)
                 }
             }
         }

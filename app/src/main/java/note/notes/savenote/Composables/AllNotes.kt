@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -16,15 +17,19 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
@@ -48,7 +53,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
@@ -70,6 +74,7 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import note.notes.savenote.Composables.Components.AppBars.BottomPopUpBar
+import note.notes.savenote.Composables.Components.AppBars.HeaderText
 import note.notes.savenote.Composables.Components.AppBars.TopNavigationBarHome
 import note.notes.savenote.Composables.Components.BackupAndRestore
 import note.notes.savenote.Composables.Components.ConfirmDelete
@@ -96,10 +101,26 @@ fun animateOnScroll(animateScroll: State<Boolean>, offset:State<Float>): IntOffs
     return IntOffset(x = 0, y = animateOrState.value.roundToInt())
 }
 
+//@OptIn(ExperimentalFoundationApi::class)
+////@Composable
+//fun navigationAnimation(scope: CoroutineScope, pagerState: PagerState, page: Int): () -> Job {
+////    val scope = rememberCoroutineScope()
+//    val animation = {
+//        scope.launch {
+//            pagerState.animateScrollToPage(
+//                page = page,
+//                animationSpec = tween(1000)
+//            )
+//        }
+//    }
+//    return animation
+//}
+
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AllNotesView(
+    modifier: Modifier = Modifier,
     primaryViewModel: PrimaryViewModel,
     notesViewModel: NotesViewModel,
     allEntries: List<Note>,
@@ -108,27 +129,28 @@ fun AllNotesView(
     focusRequester: FocusRequester,
     context: Context,
     focusManager: FocusManager,
-    modifier: Modifier = Modifier,
+    navigateChecklistView: () -> Unit,
+    navigateNoteView: () -> Unit,
+    onEditClick: (Note) -> Unit
 ) {
 
     val primaryUiState by primaryViewModel.stateGetter.collectAsState()
     val scaffoldState = rememberScaffoldState()
     val keyboardController = LocalSoftwareKeyboardController.current
-
     val allNotesState = rememberForeverLazyListState(key = "grid")
     val searchNotesState = rememberForeverLazyListState(key = "grid")
-    val allNotesObserver by remember { derivedStateOf { allNotesState.firstVisibleItemIndex > 0 } }
-    val searchNotesObserver by remember { derivedStateOf { searchNotesState.firstVisibleItemIndex > 0 } }
-
-    val toolbarHeightPx = with(LocalDensity.current) { 59.dp.roundToPx().toFloat() }
+    val allNotesObserver = remember { derivedStateOf{ allNotesState.firstVisibleItemIndex > 0 } }
+//    val searchNotesObserver = remember { derivedStateOf { searchNotesState.firstVisibleItemIndex > 0 } }
+    val toolbarHeightPx = with(LocalDensity.current) { 60.dp.roundToPx().toFloat() }
     val allowAnimation = remember { mutableStateOf(false) }
     val toolbarOffsetHeightPx = remember { mutableFloatStateOf(0f) }
+
     val customNestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val delta = available.y
                 val newOffset = toolbarOffsetHeightPx.floatValue + delta
-                if(allNotesObserver) toolbarOffsetHeightPx.floatValue = newOffset.coerceIn(-toolbarHeightPx, 0f)
+                if(allNotesObserver.value) toolbarOffsetHeightPx.floatValue = newOffset.coerceIn(-toolbarHeightPx, 0f)
                 return Offset.Zero
             }
 
@@ -142,16 +164,12 @@ fun AllNotesView(
             }
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                toolbarOffsetHeightPx.floatValue = if(toolbarOffsetHeightPx.floatValue  >= -82.5 || !allNotesObserver) 0f else -165f
+                toolbarOffsetHeightPx.floatValue = if(toolbarOffsetHeightPx.floatValue  >= -82.5 || !allNotesObserver.value) 0f else -165f
                 allowAnimation.value = false
                 return super.onPostFling(consumed, available)
             }
         }
     }
-
-//    Would be nice to add a scroll bar to show how many notes till bottom
-//    could probs also use tap to top? maybe would be nice to be dynamic, maybe after list is larger
-//    than X and only show after a certain point?? maybe animated up arrow ?
 
     BackHandler(
         onBack = {
@@ -167,7 +185,6 @@ fun AllNotesView(
         modifier = modifier,
         scaffoldState = scaffoldState,
         bottomBar = {
-
             BottomPopUpBar(primaryViewModel = primaryViewModel)
 
             MoreOptionsMain(
@@ -177,11 +194,12 @@ fun AllNotesView(
                 expandedIsFalse = { primaryViewModel.dropDown(false) },
                 help = { primaryViewModel.help(context) },
                 primaryViewModel = primaryViewModel,
-                sortBy = { primaryViewModel.updateSortByPreference(primaryUiState.sortByView) }
+                sortBy = { primaryViewModel.updateSortByPreference(primaryUiState.sortByView) },
+                themeBy = { primaryViewModel.updateTheme(primaryUiState.setTheme) }
             )
 
             TopNavigationBarHome(
-                startedScrolling = allNotesObserver || searchNotesObserver,
+                startedScrolling = allNotesObserver.value /*|| searchNotesObserver.value*/,
                 primaryViewModel = primaryViewModel,
                 focusRequester = focusRequester,
                 startSearch = { primaryViewModel.startSearch(focusRequester) },
@@ -197,8 +215,14 @@ fun AllNotesView(
                 expand = { primaryViewModel.newEntryButton(true) },
                 collapse = { primaryViewModel.newEntryButton() },
                 hideButton = !primaryUiState.showSearchBar && !primaryUiState.dropDown,
-                navigateNewChecklist = { checklistViewModel.newChecklist() },
-                navigateNewNote = { notesViewModel.navigateNewNote() }
+                navigateNewChecklist = {
+                    checklistViewModel.navigateNewChecklist()
+                    navigateChecklistView()
+                },
+                navigateNewNote = {
+                    notesViewModel.navigateNewNote()
+                    navigateNoteView()
+                }
             )
 
             ConfirmDelete(
@@ -228,11 +252,10 @@ fun AllNotesView(
                     SearchView(
                         verticalGridState = searchNotesState,
                         primaryViewModel = primaryViewModel,
-                        checklistViewModel = checklistViewModel,
                         primaryUiState = primaryUiState,
-                        notesViewModel = notesViewModel,
                         keyboardController = keyboardController!!,
-                        focusManager = focusManager
+                        focusManager = focusManager,
+                        onEditClick = { onEditClick(it) }
                     )
                 }
                 false -> {
@@ -241,10 +264,9 @@ fun AllNotesView(
                         favoriteEntries = favoriteEntries,
                         verticalGridState = allNotesState,
                         primaryViewModel = primaryViewModel,
-                        checklistViewModel = checklistViewModel,
                         primaryUiState = primaryUiState,
-                        notesViewModel = notesViewModel,
                         nestedScrollConnection = customNestedScrollConnection,
+                        onEditClick = { onEditClick(it) }
                     )
                 }
             }
@@ -259,10 +281,9 @@ fun AllEntriesView(
     favoriteEntries: List<Note>,
     verticalGridState: LazyStaggeredGridState,
     primaryViewModel: PrimaryViewModel,
-    checklistViewModel: ChecklistViewModel,
     primaryUiState: PrimaryUiState,
-    notesViewModel: NotesViewModel,
     nestedScrollConnection: NestedScrollConnection,
+    onEditClick: (Note) -> Unit
 ){
     val gridOrientation = if(primaryUiState.layoutView) StaggeredGridItemSpan.FullLine else StaggeredGridItemSpan.SingleLane
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp - 50.dp
@@ -278,19 +299,38 @@ fun AllEntriesView(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalItemSpacing = 10.dp,
         contentPadding = PaddingValues(
-            top = 55.dp,
+            top = 60.dp,
             bottom = 15.dp,
             start = 10.dp,
             end = 10.dp
         )
     ) {
+//        item(
+//            key = UUID.randomUUID(),
+//            span = StaggeredGridItemSpan.FullLine,
+//            content = {
+//               Spacer(
+//                   modifier = Modifier
+//                       .animateItemPlacement()
+//                       .height(10.dp)
+//               )
+//            }
+//        )
 
         item(
             key = UUID.randomUUID(),
-            span = StaggeredGridItemSpan.FullLine,
-            content = { Spacer(modifier = Modifier.height(15.dp)) }
-        )
-
+            span = StaggeredGridItemSpan.FullLine
+        ) {
+            PinnedDivider(
+                modifier = Modifier.animateItemPlacement(),
+                hasFavorites = favoriteEntries.isNotEmpty(),
+                text = R.string.Pinned,
+                icon = R.drawable.pin_01,
+                endPadding = 3.dp,
+                addSpacer = true,
+                spacerHeight = 20.dp
+            )
+        }
 
         items(
             items = favoriteEntries,
@@ -300,23 +340,28 @@ fun AllEntriesView(
             EntryTemplate(
                 modifier = Modifier.animateItemPlacement(),
                 primaryViewModel = primaryViewModel,
-                notesViewModel = notesViewModel,
-                checklistViewModel = checklistViewModel,
                 noteEntry = favoritesEntries,
+                onEditClick = { onEditClick(favoritesEntries) }
             )
         }
 
         item(
             key = UUID.randomUUID(),
-            span = StaggeredGridItemSpan.FullLine,
-            content = {
-                PinnedDivider(
-                    modifier = Modifier.animateItemPlacement(),
-                    hasFavorites = favoriteEntries.isNotEmpty(),
-                    spacerWidth = screenWidth / 2
-                )
-            }
-        )
+            span = StaggeredGridItemSpan.FullLine
+        ) {
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        item(
+            key = UUID.randomUUID(),
+            span = StaggeredGridItemSpan.FullLine
+        ) {
+            PinnedDivider(
+                modifier = Modifier.animateItemPlacement(),
+                hasFavorites = favoriteEntries.isNotEmpty(),
+                text = R.string.Others,
+            )
+        }
 
         items(
             items = allEntries,
@@ -326,24 +371,24 @@ fun AllEntriesView(
             EntryTemplate(
                 modifier = Modifier.animateItemPlacement(),
                 primaryViewModel = primaryViewModel,
-                notesViewModel = notesViewModel,
-                checklistViewModel = checklistViewModel,
                 noteEntry = allEntries,
+                onEditClick = { onEditClick(allEntries) }
             )
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class,
+    ExperimentalLayoutApi::class
+)
 @Composable
 fun SearchView(
     verticalGridState: LazyStaggeredGridState,
     primaryViewModel: PrimaryViewModel,
-    checklistViewModel: ChecklistViewModel,
     primaryUiState: PrimaryUiState,
-    notesViewModel: NotesViewModel,
     keyboardController: SoftwareKeyboardController,
-    focusManager: FocusManager
+    focusManager: FocusManager,
+    onEditClick: (Note) -> Unit
 ){
     val gridOrientation = if(primaryUiState.layoutView) StaggeredGridItemSpan.FullLine else StaggeredGridItemSpan.SingleLane
     val customNestedScrollConnection = remember {
@@ -357,13 +402,12 @@ fun SearchView(
     }
 
     Column{
-
         LazyVerticalStaggeredGrid(
             modifier = Modifier
                 .animateContentSize()
                 .fillMaxWidth()
                 .nestedScroll(customNestedScrollConnection)
-                .background(colors.background),
+                .windowInsetsPadding(WindowInsets.imeAnimationTarget),
             state = verticalGridState,
             columns = StaggeredGridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -389,10 +433,9 @@ fun SearchView(
                 EntryTemplate(
                     modifier = Modifier.animateItemPlacement(),
                     primaryViewModel = primaryViewModel,
-                    notesViewModel = notesViewModel,
-                    checklistViewModel = checklistViewModel,
                     noteEntry = searchResults,
                     isSearchQuery = true,
+                    onEditClick = { onEditClick(searchResults) }
                 )
             }
         }
@@ -401,26 +444,24 @@ fun SearchView(
 }
 
 @SuppressLint("UnusedContentLambdaTargetStateParameter")
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun EntryTemplate(
     modifier: Modifier = Modifier,
     primaryViewModel: PrimaryViewModel,
-    notesViewModel: NotesViewModel,
-    checklistViewModel: ChecklistViewModel,
     noteEntry: Note,
-    isSearchQuery: Boolean = false
+    isSearchQuery: Boolean = false,
+    onEditClick: () -> Unit
 
 ){
     val haptic = LocalHapticFeedback.current
-    Column(modifier){
+    Column(modifier.animateContentSize(tween(500))){
         AnimatedContent(
             transitionSpec = { fadeIn() togetherWith fadeOut() },
             targetState = noteEntry,
             label = ""
         ){ _ ->
             EntryCards(
-                modifier = Modifier.animateContentSize(tween(300)),
                 primaryViewModel = primaryViewModel,
                 note = noteEntry,
                 isSearchQuery = isSearchQuery,
@@ -428,19 +469,7 @@ fun EntryTemplate(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     primaryViewModel.deleteTally(noteEntry)
                 },
-                onEditClick = {
-                    if(noteEntry.checkList.isNullOrEmpty()) {
-                        primaryViewModel.cardFunctionSelection(
-                            navigateEntry = { notesViewModel.navigateToNote(noteEntry,true) },
-                            note = noteEntry
-                        )
-                    } else {
-                        primaryViewModel.cardFunctionSelection(
-                            navigateEntry = { checklistViewModel.editChecklist(noteEntry,true) },
-                            note = noteEntry
-                        )
-                    }
-                }
+                onEditClick = onEditClick::invoke
             )
         }
     }
@@ -490,44 +519,54 @@ fun NoResultsFound(
 
 @Composable
 fun PinnedDivider(
-    hasFavorites: Boolean,
     modifier: Modifier = Modifier,
-    spacerWidth: Dp,
-    spacerHeight: Dp = 4.dp,
-    divColour: Color = colors.onBackground
+    hasFavorites: Boolean,
+    addSpacer: Boolean = false,
+    divColour: Color = colors.onBackground,
+    text: Int,
+    icon: Int? = null,
+    endPadding: Dp = 5.dp,
+    spacerHeight: Dp = 10.dp,
 ) {
-    if(hasFavorites) {
-        Row(
-            modifier = modifier,
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Surface(
-                modifier = Modifier
-                    .width(spacerWidth)
-                    .height(spacerHeight),
-                color = divColour,
-                shape = RoundedCornerShape(15.dp),
-                content = { Text(text = "") }
-            )
-            Icon(
-                modifier = Modifier
-                    .padding(3.dp)
-                    .size(13.dp)
-                    .rotate(180f),
-                painter = painterResource(id = R.drawable.pin_01 ),
-                contentDescription = stringResource(R.string.Check),
-                tint = colors.onSurface
-            )
 
+    if(hasFavorites) {
+        @Composable
+        fun CustomDivider(isEnd: Boolean) {
             Surface(
                 modifier = Modifier
-                    .width(spacerWidth)
-                    .height(spacerHeight),
+                    .padding(if (isEnd) PaddingValues(end = endPadding) else PaddingValues(start = 5.dp))
+                    .width(40.dp)
+                    .height(3.dp),
                 color = divColour,
                 shape = RoundedCornerShape(15.dp),
                 content = { Text(text = "") }
             )
+        }
+        Column(modifier = modifier.padding(horizontal = 5.dp)) {
+            if(addSpacer) {
+                Spacer(modifier = Modifier.height(spacerHeight))
+            }
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CustomDivider(true)
+                if(icon != null){
+                    Icon(
+                        modifier = Modifier.size(11.dp),
+                        painter = painterResource(id = icon),
+                        contentDescription = stringResource(text),
+                        tint = colors.primary
+                    )
+                }
+                HeaderText(
+                    title = text,
+                    fontSize = 13.sp,
+                    color = colors.primary
+                )
+                CustomDivider(false)
+            }
+            Spacer(modifier = Modifier.height(5.dp))
         }
     }
 }

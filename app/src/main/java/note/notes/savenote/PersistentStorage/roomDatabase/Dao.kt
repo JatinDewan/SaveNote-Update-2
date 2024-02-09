@@ -9,9 +9,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NoteDao {
-
     @Query("SELECT * FROM note")
     fun getAll(): Flow<List<Note>>
+
+//    @Query("SELECT * FROM note WHERE category is :category")
+//    fun getAll(category: String?): Flow<List<Note>>
 
     @Insert
     suspend fun insert(note: Note)

@@ -17,9 +17,13 @@ interface ISharedPreferences{
 
     val getSortByView: Flow<Int>
 
+    val getTheme:Flow<Int>
+
     suspend fun setCompletedChecklistLayout(showCompleted: Boolean)
     suspend fun setLayoutInformation(setLayout: Boolean)
     suspend fun setSortByView(view: Int)
+    suspend fun setTheme(theme: Int)
+
 
 }
 class SharedPref(private val context: Context): ISharedPreferences {
@@ -28,6 +32,7 @@ class SharedPref(private val context: Context): ISharedPreferences {
         val SORT_BY_VIEW = intPreferencesKey("sortByView")
         val SHOW_COMPLETED = booleanPreferencesKey("complete")
         val LAYOUT_VIEW = booleanPreferencesKey("layout")
+        val THEME = intPreferencesKey("theme")
     }
 
     override val getCompletedChecklistEntries: Flow<Boolean>
@@ -43,6 +48,11 @@ class SharedPref(private val context: Context): ISharedPreferences {
     override val getSortByView: Flow<Int>
         get() = context.datastore.data.map {
             preferences -> preferences[SORT_BY_VIEW] ?: 0
+        }
+
+    override val getTheme: Flow<Int>
+        get() = context.datastore.data.map {
+            preferences -> preferences[THEME] ?: 0
         }
 
 
@@ -61,6 +71,12 @@ class SharedPref(private val context: Context): ISharedPreferences {
     override suspend fun setSortByView(view: Int) {
         context.datastore.edit{
             preferences -> preferences[SORT_BY_VIEW] = view
+        }
+    }
+
+    override suspend fun setTheme(theme: Int) {
+        context.datastore.edit{
+                preferences -> preferences[THEME] = theme
         }
     }
 }

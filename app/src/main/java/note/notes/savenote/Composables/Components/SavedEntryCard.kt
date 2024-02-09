@@ -2,13 +2,11 @@ package note.notes.savenote.Composables.Components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +30,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import note.notes.savenote.PersistentStorage.roomDatabase.Note
@@ -70,8 +69,7 @@ fun EntryCards(
     Card(
         backgroundColor = backgroundColour,
         shape = RoundedCornerShape(15.dp),
-        modifier = modifier.fillMaxWidth(),
-        border = BorderStroke(1.dp, colors.onBackground)
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
@@ -84,15 +82,14 @@ fun EntryCards(
         ) {
 
             Column(
-                modifier = Modifier.padding(15.dp)
+                modifier = Modifier.padding(15.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 HeaderDisplay(
                     note = note,
                     primaryViewModel = primaryViewState,
                     isSearchQuery = isSearchQuery
                 )
-
-                Spacer(modifier = Modifier.height(5.dp))
 
                 when(note.checkList.isNullOrEmpty()) {
                     true -> NoteDisplay(
@@ -124,7 +121,8 @@ fun EntryCards(
 fun HeaderDisplay(
     note: Note,
     isSearchQuery: Boolean,
-    primaryViewModel: PrimaryUiState
+    primaryViewModel: PrimaryUiState,
+    fontSize: TextUnit = 16.sp
 ) {
     when(isSearchQuery) {
         false -> {
@@ -132,7 +130,7 @@ fun HeaderDisplay(
                 Text(
                     text = it,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
+                    fontSize = fontSize,
                     color = colors.onSecondary,
                     fontFamily = UniversalFamily,
                     maxLines = 1,
@@ -146,8 +144,8 @@ fun HeaderDisplay(
                 HighlightedText(
                     text = it,
                     selectedString = primaryViewModel.searchQuery,
-                    maxLines = 3,
-                    fontSize = 15.sp
+                    maxLines = 1,
+                    fontSize = fontSize
                 )
             }
         }
@@ -179,7 +177,6 @@ fun NoteDisplay(
                 HighlightedText(
                     text = it,
                     selectedString = primaryViewModel.searchQuery,
-
                     maxLines = 10,
                     fontSize = 12.sp
                 )
@@ -196,7 +193,7 @@ fun CheckListDisplay(
 ) {
     val checklistDisplay by remember { derivedStateOf { note.checkList?.rangeFinder(5) } }
     Column(
-        verticalArrangement = Arrangement.spacedBy(5.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         checklistDisplay?.forEach { checklistEntries ->
             Row(
@@ -204,8 +201,8 @@ fun CheckListDisplay(
                 horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 Icon(
-                    modifier = Modifier.size(13.dp),
-                    tint = colors.onSecondary,
+                    modifier = Modifier.size(15.dp),
+                    tint = colors.onSurface,
                     painter = painterResource(id = R.drawable.circle),
                     contentDescription = stringResource(R.string.Check)
                 )
@@ -266,19 +263,6 @@ fun AdditionalInformation(
                     maxLines = 1,
                 )
             }
-
-//            AnimatedVisibility(
-//                visible = note.category != null,
-//                enter = scaleIn(),
-//                exit = scaleOut()
-//            ) {
-//                Icon(
-//                    modifier = Modifier.size(12.dp),
-//                    painter = painterResource(id = R.drawable.pin_01),
-//                    contentDescription = stringResource(R.string.Check),
-//                    tint = colors.onSecondary
-//                )
-//            }
         }
     }
 }

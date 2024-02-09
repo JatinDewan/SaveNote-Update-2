@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,6 +43,7 @@ import note.notes.savenote.ui.theme.UniversalFamily
 fun TopNavigationChecklist(
     backButton: () -> Unit,
     moreOptions: () -> Unit,
+    date: String,
     header: String,
     showHeader: Boolean,
     moreOptionsOpened: Boolean
@@ -59,10 +61,16 @@ fun TopNavigationChecklist(
         verticalAlignment = Alignment.CenterVertically
     ) {
         TopAppBar(
-            title = { SlideInHeader(visibility = showHeader, header = header) },
+            title = { SlideInHeader(visibility = showHeader, header = header, date = date) },
             backgroundColor = MaterialTheme.colors.background,
-            elevation = if(showHeader) 10.dp else 0.dp,
-            navigationIcon = { TopAppButtons(onClick = backButton::invoke, icon = R.drawable.arrow_ios_back) },
+            elevation = if (showHeader) 10.dp else 0.dp,
+            navigationIcon = {
+                TopAppButtons(
+                    onClick = backButton::invoke,
+                    icon = R.drawable.arrow_narrow_left,
+                    size = 30.dp
+                )
+            },
             actions = {
                 Card(
                     modifier = Modifier
@@ -95,7 +103,13 @@ fun TopNavigationNote(
         title = { },
         backgroundColor = MaterialTheme.colors.background,
         elevation = if(showHeader) 10.dp else 0.dp,
-        navigationIcon = { TopAppButtons(onClick = backButton::invoke, icon = R.drawable.arrow_ios_back) },
+        navigationIcon = {
+            TopAppButtons(
+                onClick = backButton::invoke,
+                icon = R.drawable.arrow_narrow_left,
+                size = 30.dp
+            )
+        },
         actions = {
             Card(
                 modifier = Modifier
@@ -138,7 +152,8 @@ fun TopAppButtons(
 @Composable
 fun SlideInHeader(
     visibility: Boolean,
-    header: String
+    header: String,
+    date: String
 ){
     AnimatedVisibility(
         visible = visibility,
@@ -151,14 +166,24 @@ fun SlideInHeader(
             targetOffsetY = {fullHeight -> fullHeight}
         ) + fadeOut(tween(150, easing = EaseOut))
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(end = 15.dp)
         ){
             Text(
-                text = header,
-                color = MaterialTheme.colors.onSecondary,
+                text = date,
+                color = MaterialTheme.colors.secondaryVariant,
+                fontFamily = UniversalFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = header.ifEmpty { "Un-named" },
+                color = MaterialTheme.colors.onSurface,
                 fontFamily = UniversalFamily,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,

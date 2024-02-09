@@ -20,7 +20,7 @@ fun HighlightedText(
     colour: Color = colors.primaryVariant
 ) {
 
-    val color = colors.primary.copy(0.4f)
+    val color = colors.primary.copy(0.6f)
 
     val annotatedText = remember(text, selectedString) {
         AnnotatedString.Builder(text).apply {
