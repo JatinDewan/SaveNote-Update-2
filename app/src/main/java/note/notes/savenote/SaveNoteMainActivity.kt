@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import note.notes.savenote.Composables.MainComposable
+import note.notes.savenote.Composable.MainComposable
 
 class SaveNote : ComponentActivity() {
     private var loaded = true

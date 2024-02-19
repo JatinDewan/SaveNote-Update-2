@@ -1,6 +1,5 @@
 package note.notes.savenote.Utils
 
-//import android.graphics.Color
 import android.graphics.Rect
 import android.view.ViewTreeObserver
 import androidx.compose.runtime.Composable

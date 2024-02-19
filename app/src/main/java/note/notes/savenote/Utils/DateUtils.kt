@@ -58,7 +58,10 @@ class DateUtils : DateUtilities, OldDateConverter {
      * and upgrade from Android versions older than Android 8.0, the dates will be converted to a
      * format that is compatible and replaced in the the database before being displayed on the cards
      * */
-    override fun formatDateAndTime(dateAndTime: String, replaceNotesDate:(String) -> Unit): String {
+    override fun formatDateAndTime(
+        dateAndTime: String,
+        replaceNotesDate:(String) -> Unit
+    ): String {
         val versionCheck = Build.VERSION.SDK_INT >= VERSION_CODES.O
 
         return if (versionCheck) {
@@ -71,12 +74,18 @@ class DateUtils : DateUtilities, OldDateConverter {
                 replaceNotesDate(convertedDate)
             }
 
-            val current = Instant.parse(getCurrentDateAndTime()).atZone(ZoneId.systemDefault())
+            val current = Instant.parse(Instant.now().toString()).atZone(ZoneId.systemDefault())
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd MMMM uu, EEEE, HH:mm").withZone(ZoneId.systemDefault())
             val parseTime = formatter.format(savedDateAndTime)
             val timeFormatted = parseTime.toString().split(", ")
 
-            when (savedDateAndTime.toLocalDateTime().until(current, ChronoUnit.DAYS).toInt()) {
+            fun dateDifference(): Int {
+                val savedDate = savedDateAndTime.toLocalDate()
+                val currentDate = current.toLocalDate()
+                return savedDate.until(currentDate, ChronoUnit.DAYS).toInt()
+            }
+
+            when (dateDifference()) {
                 0 -> "Today ${timeFormatted.last()}"
                 1 -> "Yesterday ${timeFormatted.last()}"
                 in 2..6 -> "${timeFormatted[1]} ${timeFormatted.last()}"

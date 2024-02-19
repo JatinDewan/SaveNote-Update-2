@@ -5,12 +5,14 @@ import android.net.Uri
 import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import note.notes.savenote.PersistentStorage.roomDatabase.NewArrayConverter
-import note.notes.savenote.PersistentStorage.roomDatabase.Note
+import note.notes.savenote.PersistentStorage.RoomDatabase.NewArrayConverter
+import note.notes.savenote.PersistentStorage.RoomDatabase.Note
 
 
 interface BackupAndRestore {
+
     var restoreNotes: List<Note>
+
     suspend fun backUp(uri: Uri, context: Context, noteEntries: List<Note>)
 
     suspend fun restore(uri: Uri, context: Context, noteEntries: List<Note>)
@@ -18,9 +20,12 @@ interface BackupAndRestore {
 }
 
 class BackupAndRestoreNote : BackupAndRestore {
+
     private val noteTypeConverter = NewArrayConverter()
-    private var saveAllNotes = "7800728b-54ca-496e-93c1-7bb4caf97081"
+    private val verificationCode = "7800728b-54ca-496e-93c1-7bb4caf97081"
+    private var saveAllNotes = verificationCode
     override var restoreNotes: List<Note> = emptyList()
+
     private fun toastMessage(context: Context, message: String){
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
@@ -41,7 +46,7 @@ class BackupAndRestoreNote : BackupAndRestore {
                 writeTo?.bufferedWriter()?.use { write -> write.write(saveAllNotes) }
             }
             restoreNotes = emptyList()
-            saveAllNotes = "7800728b-54ca-496e-93c1-7bb4caf97081"
+            saveAllNotes = verificationCode
             toastMessage(context = context, message = "Backup Successful")
         } catch (e: Exception) {
             toastMessage(context = context, message = "Invalid Location")

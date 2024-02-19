@@ -2,10 +2,11 @@ package note.notes.savenote.Utils
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import note.notes.savenote.PersistentStorage.roomDatabase.Note
+import note.notes.savenote.PersistentStorage.RoomDatabase.Note
 
 
 interface NotesSearch {
+
     suspend fun searchAllNotes(searchNotes: List<Note>, searchQuery: String): List<Note>
 
 }
