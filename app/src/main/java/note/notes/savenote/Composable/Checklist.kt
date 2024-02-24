@@ -76,9 +76,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.delay
 import note.notes.savenote.Composable.Components.AppBars.NotesAndChecklistNavigationBar
-import note.notes.savenote.Composable.Components.CustomTextField
+import note.notes.savenote.Composable.Components.CustomTextField.CustomTextField
+import note.notes.savenote.Composable.Components.CustomTextField.TextFieldPlaceHolder
 import note.notes.savenote.Composable.Components.OptionMenus.OptionsMenuChecklist
-import note.notes.savenote.Composable.Components.TextFieldPlaceHolder
 import note.notes.savenote.PersistentStorage.RoomDatabase.CheckList
 import note.notes.savenote.R
 import note.notes.savenote.Utils.Keyboard
@@ -86,8 +86,8 @@ import note.notes.savenote.Utils.conditional
 import note.notes.savenote.Utils.keyboardAsState
 import note.notes.savenote.Utils.maxScrollFlingBehavior
 import note.notes.savenote.Utils.observeAsState
-import note.notes.savenote.ViewModel.model.ChecklistUiState
 import note.notes.savenote.ViewModel.ChecklistViewModel
+import note.notes.savenote.ViewModel.model.ChecklistUiState
 import note.notes.savenote.ui.theme.UniversalFamily
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.ReorderableLazyListState
@@ -141,9 +141,7 @@ fun ChecklistComposer(
 
     LaunchedEffect(stateLifecycle) {
         if(checklistViewModel.checklistEntry.text.isNotEmpty()) {
-            if (stateLifecycle == Lifecycle.Event.ON_RESUME) {
-                focusRequester.requestFocus()
-            }
+            if (stateLifecycle == Lifecycle.Event.ON_RESUME) focusRequester.requestFocus()
         }
 
         if (stateLifecycle == Lifecycle.Event.ON_PAUSE) {
@@ -203,9 +201,7 @@ fun ChecklistComposer(
                         }
                     }
 
-                    item {
-                        Spacer(modifier = Modifier.height(7.dp))
-                    }
+                    item { Spacer(modifier = Modifier.height(7.dp)) }
 
                     item(key = 9038403849028408932) {
                         Column(modifier = Modifier.animateItemPlacement(customAnimationSpec)){
@@ -252,9 +248,7 @@ fun ChecklistComposer(
                         }
                     }
 
-                    item {
-                        Spacer(modifier = Modifier.height(7.dp))
-                    }
+                    item { Spacer(modifier = Modifier.height(7.dp)) }
 
                     items(
                         items = checkedEntries.value,
@@ -378,21 +372,17 @@ fun NewEntry(
                 modifier = textBoxModifier
                     .fillMaxWidth()
                     .onFocusChanged {
-                        if (it.isFocused) {
-                            checklistViewModel.editChecklistEntry(0)
-                        }
+                        if (it.isFocused) checklistViewModel.editChecklistEntry(0)
                         checklistViewModel.isTextFocused(it.isFocused)
                     },
-                value = checklistViewModel.checklistEntry.text,
-                onValueChange = { checklistViewModel.updateChecklistEntry(it) },
                 maxLines = 15,
+                value = checklistViewModel.checklistEntry.text,
+                fontSize = textScale,
+                onValueChange = { checklistViewModel.updateChecklistEntry(it) },
                 onTextLayout = { checklistViewModel.bringInToViewRequester(bringIntoViewRequester) },
                 keyboardAction = KeyboardActions(
-                    onDone = {
-                        checklistViewModel.addEntryToChecklist(bringIntoViewRequester)
-                    }
+                    onDone = { checklistViewModel.addEntryToChecklist(bringIntoViewRequester) }
                 ),
-                fontSize = textScale,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
                     imeAction = ImeAction.Done
@@ -438,7 +428,7 @@ fun CheckList(
 
     LaunchedEffect(keyboard.value == Keyboard.Opened) {
         if(focusedText.value){
-             delay(100)
+            delay(100)
             bringIntoViewRequester.bringIntoView()
         }
     }
@@ -527,8 +517,7 @@ fun CheckList(
                                 deletable = false,
                                 checkList = checkList
                             )
-                        },
-                        decorationBox = { /*TODO*/ }
+                        }
                     )
                 }
             }

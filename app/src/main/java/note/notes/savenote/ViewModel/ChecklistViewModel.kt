@@ -4,7 +4,6 @@ import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.focus.FocusManager
@@ -23,9 +22,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import note.notes.savenote.R
 import note.notes.savenote.PersistentStorage.RoomDatabase.CheckList
 import note.notes.savenote.PersistentStorage.RoomDatabase.Note
+import note.notes.savenote.R
 import note.notes.savenote.Utils.swapAll
 import note.notes.savenote.ViewModel.model.ChecklistUiState
 import java.util.UUID
@@ -38,16 +37,15 @@ class ChecklistViewModel (
 
     private val stateSetter = MutableStateFlow(ChecklistUiState())
     val stateGetter: StateFlow<ChecklistUiState> = stateSetter.asStateFlow()
-    var temporaryChecklist = mutableStateListOf<CheckList>()
 
     init { updateState() }
 
     fun checklistUncheckedUpdater():MutableList<CheckList> {
-        return temporaryChecklist.filter { entry -> entry.strike == 0 }.toMutableStateList()
+        return stateGetter.value.temporaryChecklist.filter { entry -> entry.strike == 0 }.toMutableStateList()
     }
 
     fun checklistCheckedUpdater():List<CheckList> {
-        return temporaryChecklist.filter { entry -> entry.strike == 1}.toMutableStateList()
+        return stateGetter.value.temporaryChecklist.filter { entry -> entry.strike == 1}.toMutableStateList()
     }
 
     @OptIn(SavedStateHandleSaveableApi::class)
@@ -60,12 +58,12 @@ class ChecklistViewModel (
     }
 
     fun confirmDeleteAllChecked() = viewModelScope.launch {
-        temporaryChecklist.removeIf { it.strike == 1 }
+        stateGetter.value.temporaryChecklist.removeIf { it.strike == 1 }
         moreOptionsMenu()
     }
 
     fun unCheckCompleted() = viewModelScope.launch{
-        temporaryChecklist.map { it.strike == 0 }
+        stateGetter.value.temporaryChecklist.map { it.strike == 0 }
         moreOptionsMenu()
     }
 
@@ -76,7 +74,6 @@ class ChecklistViewModel (
     fun moreOptionsMenu(moreOptionsMenu: Boolean = false) = viewModelScope.launch {
         stateSetter.update { currentState -> currentState.copy(showMoreOptionsMenu = moreOptionsMenu) }
     }
-
 
     fun updateShowCompleted(boolean: Boolean) = viewModelScope.launch {
         primaryViewModel.applicationPreferences.setCompletedChecklistLayout(boolean)
@@ -113,7 +110,6 @@ class ChecklistViewModel (
         }
     }
 
-
     @OptIn(ExperimentalFoundationApi::class)
     fun bringInToViewRequester(bringIntoViewRequester: BringIntoViewRequester) = viewModelScope.launch {
         bringIntoViewRequester.bringIntoView()
@@ -148,7 +144,7 @@ class ChecklistViewModel (
 
     fun checklistCompletedTask(checkList: CheckList) {
         viewModelScope.launch{
-            temporaryChecklist[temporaryChecklist.indexOf(checkList)] = CheckList(checkList.note, 0, checkList.key)
+            stateGetter.value.temporaryChecklist[stateGetter.value.temporaryChecklist.indexOf(checkList)] = CheckList(checkList.note, 0, checkList.key)
         }
     }
 
@@ -158,11 +154,11 @@ class ChecklistViewModel (
         deletable:Boolean = true,
         checkList: CheckList
     ) = viewModelScope.launch{
-        val index = temporaryChecklist.indexOf(checkList)
+        val index = stateGetter.value.temporaryChecklist.indexOf(checkList)
         try {
             when {
-                entry.isEmpty() && deletable -> temporaryChecklist.remove(checkList)
-                else -> temporaryChecklist[index] = CheckList(entry, strike, checkList.key)
+                entry.isEmpty() && deletable -> stateGetter.value.temporaryChecklist.remove(checkList)
+                else -> stateGetter.value.temporaryChecklist[index] = CheckList(entry, strike, checkList.key)
             }
         } catch (_:IndexOutOfBoundsException) {
             Log.ERROR
@@ -171,7 +167,7 @@ class ChecklistViewModel (
 
     fun deleteOrComplete(checkList: CheckList) = viewModelScope.launch {
         if(stateGetter.value.checklistKey == checkList.key) {
-            temporaryChecklist.remove(checkList)
+            stateGetter.value.temporaryChecklist.remove(checkList)
         } else {
             entryEditOrAdd(
                 entry = checkList.note,
@@ -183,7 +179,7 @@ class ChecklistViewModel (
 
 
     fun shareChecklist(): Intent {
-        val listEntries = temporaryChecklist.filter { it.strike == 0 }
+        val listEntries = stateGetter.value.temporaryChecklist.filter { it.strike == 0 }
             .joinToString { "\n○ ${it.note}" }
             .replace(",","")
         return Intent.createChooser(
@@ -198,12 +194,12 @@ class ChecklistViewModel (
 
     fun saveNewOrEditExistingChecklist() = viewModelScope.launch {
         if(stateGetter.value.uid == 0) {
-            if(stateGetter.value.header.isNotEmpty() || temporaryChecklist.isNotEmpty()) {
+            if(stateGetter.value.header.isNotEmpty() || stateGetter.value.temporaryChecklist.isNotEmpty()) {
                 withContext(Dispatchers.IO){
                     primaryViewModel.insertNote(
                         Note(
                             header = stateGetter.value.header,
-                            checkList = ArrayList(temporaryChecklist)
+                            checkList = ArrayList(stateGetter.value.temporaryChecklist)
                         )
                     ).collect { uid ->
                         stateSetter.update { updateState ->
@@ -214,18 +210,18 @@ class ChecklistViewModel (
             }
         } else {
             if( stateGetter.value.fullChecklist.header != stateGetter.value.header ||
-                stateGetter.value.fullChecklist.checkList != temporaryChecklist
+                stateGetter.value.fullChecklist.checkList != stateGetter.value.temporaryChecklist
             ) {
                 withContext(Dispatchers.IO){
                     primaryViewModel.editNote(
                         uid = stateGetter.value.uid,
                         header = stateGetter.value.header,
-                        checklist = ArrayList(temporaryChecklist),
+                        checklist = ArrayList(stateGetter.value.temporaryChecklist),
                         category = stateGetter.value.category
                     )
                 }
             }
-            if(stateGetter.value.header.isEmpty() && temporaryChecklist.isEmpty()) {
+            if(stateGetter.value.header.isEmpty() && stateGetter.value.temporaryChecklist.isEmpty()) {
                 primaryViewModel.deleteNote(stateGetter.value.uid)
             }
         }
@@ -241,7 +237,7 @@ class ChecklistViewModel (
     fun addEntryToChecklist(bringIntoViewRequester: BringIntoViewRequester) {
         val addEntry = viewModelScope.launch {
             if(checklistEntry.text.isNotEmpty())  {
-                temporaryChecklist.add(
+                stateGetter.value.temporaryChecklist.add(
                     CheckList(
                         note = checklistEntry.text,
                         strike = 0,
@@ -281,7 +277,7 @@ class ChecklistViewModel (
         }
         val notes = note.copy(checkList = checkListNewKeys)
 
-        temporaryChecklist.swapAll(checklist = checkListNewKeys)
+        stateGetter.value.temporaryChecklist.swapAll(checklist = checkListNewKeys)
         stateSetter.update {
             currentState -> currentState.copy(
                 fullChecklist = notes,
@@ -298,7 +294,7 @@ class ChecklistViewModel (
      * */
     fun resetValues() = viewModelScope.launch {
         updateChecklistEntry("")
-        temporaryChecklist.clear()
+        stateGetter.value.temporaryChecklist.clear()
         stateSetter.update { updateStates ->
             updateStates.copy(
                 fullChecklist = Note(),

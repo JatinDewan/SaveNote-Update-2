@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NoteDao {
+
     @Query("SELECT * FROM note")
     fun getAll(): Flow<List<Note>>
 

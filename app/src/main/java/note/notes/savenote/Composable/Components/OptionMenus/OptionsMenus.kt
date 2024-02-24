@@ -26,6 +26,7 @@ import note.notes.savenote.ViewModel.PrimaryViewModel
 
 @Composable
 fun OptionsMenuChecklist(
+    modifier: Modifier = Modifier,
     dismiss: Boolean,
     canReArrange: Boolean,
     showCompletedBoolean: Boolean,
@@ -34,8 +35,7 @@ fun OptionsMenuChecklist(
     unCheckCompleted:() -> Unit,
     confirmDelete:() -> Unit,
     expandedIsFalse:() -> Unit,
-    showCompleted:() -> Unit,
-    modifier: Modifier = Modifier
+    showCompleted:() -> Unit
 ) {
     var confirmDeleteMessage by remember { mutableStateOf(false) }
     val defaultTextBackgroundColour = colors.onBackground
@@ -68,77 +68,76 @@ fun OptionsMenuChecklist(
         modifier = modifier.padding(4.dp),
         dismiss = dismiss,
         expandedIsFalse = expandedIsFalse::invoke,
-        additionalDismissFunction = { confirmDeleteMessage = false },
-        menu = {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+        additionalDismissFunction = { confirmDeleteMessage = false }
+    ) {
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
 
-                ButtonEntries(
-                    buttonFunction = share::invoke,
-                    entryLabel = R.string.ShareList,
-                    entryIcon = R.drawable.share_03,
-                    dismiss = dismiss,
-                    animationDelay = 100,
-                    iconBackgroundColour = colors.onSecondary,
-                    textBackgroundColour = defaultTextBackgroundColour,
-                    iconColour = colors.background,
-                    textColour = colors.onSecondary
-                )
+            ButtonEntries(
+                buttonFunction = share::invoke,
+                entryLabel = R.string.ShareList,
+                entryIcon = R.drawable.share_03,
+                dismiss = dismiss,
+                animationDelay = 100,
+                iconBackgroundColour = colors.onSecondary,
+                textBackgroundColour = defaultTextBackgroundColour,
+                iconColour = colors.background,
+                textColour = colors.onSecondary
+            )
 
-                ButtonEntries(
-                    buttonFunction = reArrange::invoke,
-                    entryLabel = R.string.ReArrange,
-                    entryIcon = R.drawable.switch_vertical_01,
-                    dismiss = dismiss,
-                    animationDelay = 150,
-                    iconBackgroundColour = reArrangeBackgroundColour,
-                    textBackgroundColour = defaultTextBackgroundColour,
-                    iconColour = colors.background,
-                    textColour = colors.onSecondary
-                )
+            ButtonEntries(
+                buttonFunction = reArrange::invoke,
+                entryLabel = R.string.ReArrange,
+                entryIcon = R.drawable.switch_vertical_01,
+                dismiss = dismiss,
+                animationDelay = 150,
+                iconBackgroundColour = reArrangeBackgroundColour,
+                textBackgroundColour = defaultTextBackgroundColour,
+                iconColour = colors.background,
+                textColour = colors.onSecondary
+            )
 
-                ButtonEntries(
-                    buttonFunction = showCompleted::invoke,
-                    entryLabel = if(showCompletedBoolean) R.string.HideCompleted else R.string.ShowCompleted,
-                    entryIcon = R.drawable.eye,
-                    dismiss = dismiss,
-                    animationDelay = 200,
-                    iconBackgroundColour = showCompletedBackgroundColour,
-                    textBackgroundColour = defaultTextBackgroundColour,
-                    iconColour = colors.background,
-                    textColour = colors.onSecondary
-                )
+            ButtonEntries(
+                buttonFunction = showCompleted::invoke,
+                entryLabel = if(showCompletedBoolean) R.string.HideCompleted else R.string.ShowCompleted,
+                entryIcon = R.drawable.eye,
+                dismiss = dismiss,
+                animationDelay = 200,
+                iconBackgroundColour = showCompletedBackgroundColour,
+                textBackgroundColour = defaultTextBackgroundColour,
+                iconColour = colors.background,
+                textColour = colors.onSecondary
+            )
 
-                ButtonEntries(
-                    buttonFunction = unCheckCompleted::invoke,
-                    entryLabel = R.string.UncheckEntries,
-                    entryIcon = R.drawable.circle,
-                    dismiss = dismiss,
-                    animationDelay = 250,
-                    iconBackgroundColour = colors.onSecondary,
-                    textBackgroundColour = defaultTextBackgroundColour,
-                    iconColour = colors.background,
-                    textColour = colors.onSecondary
-                )
+            ButtonEntries(
+                buttonFunction = unCheckCompleted::invoke,
+                entryLabel = R.string.UncheckEntries,
+                entryIcon = R.drawable.circle,
+                dismiss = dismiss,
+                animationDelay = 250,
+                iconBackgroundColour = colors.onSecondary,
+                textBackgroundColour = defaultTextBackgroundColour,
+                iconColour = colors.background,
+                textColour = colors.onSecondary
+            )
 
-                ButtonEntries(
-                    textBoxModifier = Modifier.animateContentSize(),
-                    buttonFunction = { confirmDeleteMessage = if(!confirmDeleteMessage) true else { confirmDelete(); false } },
-                    entryLabel = if (!confirmDeleteMessage) R.string.DeleteChecked else R.string.TapToConfirm,
-                    entryIcon = R.drawable.trash_02,
-                    dismiss = dismiss,
-                    animationDelay = 300,
-                    iconBackgroundColour = confirmDeleteColourIcon,
-                    textBackgroundColour = confirmDeleteColour,
-                    iconColour = colors.background,
-                    textColour = colors.onSecondary
+            ButtonEntries(
+                textBoxModifier = Modifier.animateContentSize(),
+                buttonFunction = { confirmDeleteMessage = if(!confirmDeleteMessage) true else { confirmDelete(); false } },
+                entryLabel = if (!confirmDeleteMessage) R.string.DeleteChecked else R.string.TapToConfirm,
+                entryIcon = R.drawable.trash_02,
+                dismiss = dismiss,
+                animationDelay = 300,
+                iconBackgroundColour = confirmDeleteColourIcon,
+                textBackgroundColour = confirmDeleteColour,
+                iconColour = colors.background,
+                textColour = colors.onSecondary
 
-                )
-            }
+            )
         }
-    )
+    }
 }
 
 @Composable
@@ -154,10 +153,9 @@ fun OptionsMenuMainView(
     primaryViewModel: PrimaryViewModel,
     menuPadding: Dp = 7.dp
 ) {
-
+    val primaryUiState by primaryViewModel.stateGetter.collectAsState()
     val textBackgroundColour = colors.onBackground
     val iconBackgroundColour = colors.onSecondary
-    val primaryUiState by primaryViewModel.stateGetter.collectAsState()
     val chooseTheme = remember {
         derivedStateOf {
             when (primaryUiState.setTheme) {
@@ -181,78 +179,77 @@ fun OptionsMenuMainView(
     OptionMenuContainer(
         modifier = modifier.padding(top = 64.dp),
         dismiss = dismiss,
-        expandedIsFalse = expandedIsFalse::invoke,
-        menu = {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ButtonEntries(
-                    buttonFunction = sortBy::invoke,
-                    entryLabel = R.string.Sort,
-                    entryIcon = R.drawable.sort_by,
-                    dismiss = dismiss,
-                    animationDelay = 100,
-                    padding = menuPadding,
-                    textChangeCondition = primaryUiState.sortByView,
-                    additionalText = chooseSortBy.value,
-                    iconBackgroundColour = iconBackgroundColour,
-                    textBackgroundColour = textBackgroundColour,
-                    textColour = colors.onSecondary,
-                    additionalTextSpacing = 4.dp
-                )
+        expandedIsFalse = expandedIsFalse::invoke
+    ) {
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ButtonEntries(
+                buttonFunction = sortBy::invoke,
+                entryLabel = R.string.Sort,
+                entryIcon = R.drawable.sort_by,
+                dismiss = dismiss,
+                animationDelay = 100,
+                padding = menuPadding,
+                textChangeCondition = primaryUiState.sortByView,
+                additionalText = chooseSortBy.value,
+                iconBackgroundColour = iconBackgroundColour,
+                textBackgroundColour = textBackgroundColour,
+                textColour = colors.onSecondary,
+                additionalTextSpacing = 4.dp
+            )
 
-                ButtonEntries(
-                    buttonFunction = themeBy::invoke,
-                    entryLabel = R.string.Theme,
-                    entryIcon = R.drawable.paint,
-                    dismiss = dismiss,
-                    animationDelay = 150,
-                    padding = menuPadding,
-                    textChangeCondition = primaryUiState.setTheme,
-                    additionalText = chooseTheme.value,
-                    iconBackgroundColour = iconBackgroundColour,
-                    textBackgroundColour = textBackgroundColour,
-                    textColour = colors.onSecondary,
-                    additionalTextSpacing = 4.dp
-                )
+            ButtonEntries(
+                buttonFunction = themeBy::invoke,
+                entryLabel = R.string.Theme,
+                entryIcon = R.drawable.paint,
+                dismiss = dismiss,
+                animationDelay = 150,
+                padding = menuPadding,
+                textChangeCondition = primaryUiState.setTheme,
+                additionalText = chooseTheme.value,
+                iconBackgroundColour = iconBackgroundColour,
+                textBackgroundColour = textBackgroundColour,
+                textColour = colors.onSecondary,
+                additionalTextSpacing = 4.dp
+            )
 
-                ButtonEntries(
-                    buttonFunction = backUp::invoke,
-                    entryLabel = R.string.BackUp,
-                    entryIcon = R.drawable.server_01,
-                    dismiss = dismiss,
-                    animationDelay = 200,
-                    padding = menuPadding,
-                    iconBackgroundColour = iconBackgroundColour,
-                    textBackgroundColour = textBackgroundColour,
-                    textColour = colors.onSecondary
-                )
+            ButtonEntries(
+                buttonFunction = backUp::invoke,
+                entryLabel = R.string.BackUp,
+                entryIcon = R.drawable.server_01,
+                dismiss = dismiss,
+                animationDelay = 200,
+                padding = menuPadding,
+                iconBackgroundColour = iconBackgroundColour,
+                textBackgroundColour = textBackgroundColour,
+                textColour = colors.onSecondary
+            )
 
-                ButtonEntries(
-                    buttonFunction = rateApp::invoke,
-                    entryLabel = R.string.RateApp,
-                    entryIcon = R.drawable.thumbs_up,
-                    dismiss = dismiss,
-                    animationDelay = 250,
-                    padding = menuPadding,
-                    iconBackgroundColour = iconBackgroundColour,
-                    textBackgroundColour = textBackgroundColour,
-                    textColour = colors.onSecondary
-                )
+            ButtonEntries(
+                buttonFunction = rateApp::invoke,
+                entryLabel = R.string.RateApp,
+                entryIcon = R.drawable.thumbs_up,
+                dismiss = dismiss,
+                animationDelay = 250,
+                padding = menuPadding,
+                iconBackgroundColour = iconBackgroundColour,
+                textBackgroundColour = textBackgroundColour,
+                textColour = colors.onSecondary
+            )
 
-                ButtonEntries(
-                    buttonFunction = help::invoke,
-                    entryLabel = R.string.Help,
-                    entryIcon = R.drawable.help_circle,
-                    dismiss = dismiss,
-                    animationDelay = 300,
-                    padding = menuPadding,
-                    iconBackgroundColour = iconBackgroundColour,
-                    textBackgroundColour = textBackgroundColour,
-                    textColour = colors.onSecondary
-                )
-            }
+            ButtonEntries(
+                buttonFunction = help::invoke,
+                entryLabel = R.string.Help,
+                entryIcon = R.drawable.help_circle,
+                dismiss = dismiss,
+                animationDelay = 300,
+                padding = menuPadding,
+                iconBackgroundColour = iconBackgroundColour,
+                textBackgroundColour = textBackgroundColour,
+                textColour = colors.onSecondary
+            )
         }
-    )
+    }
 }

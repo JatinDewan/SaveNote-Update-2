@@ -1,10 +1,7 @@
 package note.notes.savenote.Composable.Components.PopUpTasks
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,12 +19,12 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import note.notes.savenote.Composable.Components.Templates.OptionMenuContainer
 import note.notes.savenote.R
 import note.notes.savenote.ui.theme.UniversalFamily
 
@@ -38,35 +35,32 @@ fun ConfirmDelete(
     confirmDelete:() -> Unit,
     confirmMessage: String,
 ){
-    if(popUp) {
-        Box(
+    OptionMenuContainer(
+        dismiss = popUp,
+        expandedIsFalse = { cancel() },
+        contentAlignment = Alignment.Center,
+        showContent = popUp
+    ) {
+        Card(
             modifier = Modifier
-                .pointerInput(Unit) { detectTapGestures(onPress = { cancel() }) }
-                .fillMaxSize()
-                .background(MaterialTheme.colors.background.copy(0.8f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Card(
+                .width(260.dp)
+                .height(160.dp),
+            shape = RoundedCornerShape(15.dp),
+            backgroundColor = MaterialTheme.colors.secondary,
+            border = BorderStroke(1.dp, color = MaterialTheme.colors.onBackground)
+        ){
+            Column(
                 modifier = Modifier
-                    .width(260.dp)
-                    .height(160.dp),
-                shape = RoundedCornerShape(15.dp),
-                backgroundColor = MaterialTheme.colors.secondary,
-                border = BorderStroke(1.dp, color = MaterialTheme.colors.onBackground)
+                    .fillMaxSize()
+                    .padding(15.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
             ){
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(15.dp),
-                    verticalArrangement = Arrangement.SpaceBetween,
-                ){
-                    ConfirmDeleteHeader(confirmMessage = confirmMessage)
+                ConfirmDeleteHeader(confirmMessage = confirmMessage)
 
-                    DeleteConfirmationSelection(
-                        cancel = cancel::invoke,
-                        confirmDelete = confirmDelete::invoke
-                    )
-                }
+                DeleteConfirmationSelection(
+                    cancel = cancel::invoke,
+                    confirmDelete = confirmDelete::invoke
+                )
             }
         }
     }
@@ -124,14 +118,8 @@ fun DeleteConfirmationSelection(
             backgroundColor = MaterialTheme.colors.background
         ) {
             IconButton(
-                modifier = Modifier.size(
-                    width = 60.dp,
-                    height = 30.dp
-                ),
-                onClick = {
-                    confirmDelete()
-                    cancel()
-                }
+                modifier = Modifier.size(width = 60.dp, height = 30.dp),
+                onClick = { confirmDelete(); cancel() }
             ){
                 Text(
                     textAlign = TextAlign.Center,

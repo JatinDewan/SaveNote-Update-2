@@ -25,7 +25,7 @@ fun LoadingScreen(
             modifier = Modifier
                 .background(MaterialTheme.colors.background.copy(alpha = 0.9f))
                 .fillMaxSize()
-                .pointerInput(Unit) { /*Needed to not click anything*/ },
+                .pointerInput(Unit) { /* Empty lambda to disable interactions */ },
             contentAlignment = Alignment.Center
 
         ) {

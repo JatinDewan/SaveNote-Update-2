@@ -34,6 +34,7 @@ import note.notes.savenote.PersistentStorage.RoomDatabase.Note
 import note.notes.savenote.ViewModel.ChecklistViewModel
 import note.notes.savenote.ViewModel.NotesViewModel
 import note.notes.savenote.ViewModel.PrimaryViewModel
+import note.notes.savenote.ViewModel.model.PrimaryUiState
 import note.notes.savenote.ui.theme.SaveNoteTheme
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
@@ -50,6 +51,7 @@ fun MainComposable(
     val primaryUiState by primaryViewModel.stateGetter.collectAsState()
     val notesUiState by notesViewModel.stateGetter.collectAsState()
     val checklistUiState by checklistViewModel.stateGetter.collectAsState()
+
     val reorderableState = reorderableListState(checklistViewModel = checklistViewModel)
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
@@ -78,7 +80,6 @@ fun MainComposable(
                         notesViewModel.resetValues()
                         checklistViewModel.resetValues()
                     }
-
                     AllNotesView(
                         primaryViewModel = primaryViewModel,
                         notesViewModel = notesViewModel,
@@ -102,13 +103,14 @@ fun MainComposable(
                             }
                         },
                         onEditClick = { noteEntry ->
-                            EditOnClick(
+                            editOnClick(
                                 primaryViewModel = primaryViewModel,
                                 notesViewModel = notesViewModel,
                                 checklistViewModel = checklistViewModel,
                                 pagerState = pagerState,
                                 noteEntry = noteEntry,
-                                coroutineScope = scope
+                                coroutineScope = scope,
+                                primaryUiState = primaryUiState
                             )
                         }
                     )
@@ -157,15 +159,16 @@ fun MainComposable(
 }
 
 @OptIn(ExperimentalFoundationApi::class)
-fun EditOnClick(
+fun editOnClick(
     primaryViewModel: PrimaryViewModel,
     notesViewModel: NotesViewModel,
     checklistViewModel: ChecklistViewModel,
+    primaryUiState: PrimaryUiState,
     pagerState: PagerState,
     noteEntry: Note,
     coroutineScope: CoroutineScope
 ) {
-    if (primaryViewModel.temporaryEntryHold.isEmpty()) {
+    if (primaryUiState.temporaryEntryHold.isEmpty()) {
         if (noteEntry.checkList.isNullOrEmpty()) {
             primaryViewModel.cardFunctionSelection(
                 navigateEntry = { notesViewModel.editNote(noteEntry) },
@@ -202,9 +205,7 @@ fun HomeScreenLayout(
                     .background(color = colors.background)
                     .fillMaxSize()
             ) {
-                Box(modifier = Modifier.windowInsetsPadding(WindowInsets.systemBars)) {
-                    mainContent()
-                }
+                Box(modifier = Modifier.windowInsetsPadding(WindowInsets.systemBars)) { mainContent() }
             }
 
             if (allowPageInteraction) {
@@ -223,15 +224,16 @@ fun HomeScreenLayout(
 fun reorderableListState(
     checklistViewModel: ChecklistViewModel
 ): ReorderableLazyListState {
+    val checklistUiState by checklistViewModel.stateGetter.collectAsState()
     return rememberReorderableLazyListState(
         canDragOver = { from, _ ->
             from.index <= checklistViewModel.checklistUncheckedUpdater().lastIndex + 6 && from.index >= 6
         },
         onMove = { from, to ->
-            val fromIndex = checklistViewModel.temporaryChecklist.indexOfFirst { it.key == from.key }
-            val toIndex = checklistViewModel.temporaryChecklist.indexOfFirst { it.key == to.key }
+            val fromIndex = checklistUiState.temporaryChecklist.indexOfFirst { it.key == from.key }
+            val toIndex = checklistUiState.temporaryChecklist.indexOfFirst { it.key == to.key }
             if (fromIndex != -1 && toIndex != -1) {
-                checklistViewModel.temporaryChecklist.apply { add(toIndex, removeAt(fromIndex)) }
+                checklistUiState.temporaryChecklist.apply { add(toIndex, removeAt(fromIndex)) }
             }
         }
     )

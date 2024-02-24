@@ -12,8 +12,8 @@ android {
         applicationId "note.notes.savenote"
         minSdk 24
         targetSdk 34
-        versionCode 3
-        versionName "3.0"
+        versionCode 5
+        versionName "5.0"
         resourceConfigurations += ['en', 'US']
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -49,14 +49,10 @@ android {
 
 dependencies {
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.1'
     def room_version = "2.6.1"
     def lifecycle_version = "2.7.0"
-    def paging_version = "3.2.1"
 
-    implementation("androidx.paging:paging-runtime:$paging_version")
-
-    implementation 'com.google.code.gson:gson:2.10'
+    implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'androidx.test:core-ktx:1.5.0'
 
     implementation("androidx.room:room-runtime:$room_version")
@@ -81,6 +77,7 @@ dependencies {
     implementation "androidx.compose.material:material-icons-extended:1.5.4"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0"
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.1'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_ui_version"

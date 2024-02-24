@@ -69,7 +69,11 @@ fun ButtonEntries(
     ) {
         AnimatedVisibility(
             visible = dismiss,
-            enter = slideInHorizontally(tween(animationDelay + 200)) + fadeIn(tween(animationDelay + 200)),
+            enter = slideInHorizontally(
+                tween(animationDelay + 200)
+            ) + fadeIn(
+                tween(animationDelay + 200)
+            ),
             exit = fadeOut(tween(100))
         ){
             Card(
@@ -136,8 +140,12 @@ fun AdditionalText(
     AnimatedContent(
         targetState = textChangeCondition,
         transitionSpec = {
-            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(300)) + fadeIn(tween(100)) togetherWith
-            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(300)) + fadeOut(tween(100))
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Down, tween(300)
+            ) + fadeIn(tween(100)) togetherWith
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Down, tween(300)
+            ) + fadeOut(tween(100))
         },
         label = ""
     ){ _ ->

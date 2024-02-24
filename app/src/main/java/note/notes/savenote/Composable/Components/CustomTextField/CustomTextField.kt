@@ -1,4 +1,4 @@
-package note.notes.savenote.Composable.Components
+package note.notes.savenote.Composable.Components.CustomTextField
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row

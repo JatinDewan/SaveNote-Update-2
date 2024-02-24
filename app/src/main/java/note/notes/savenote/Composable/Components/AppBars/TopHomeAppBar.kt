@@ -23,10 +23,9 @@ import androidx.compose.material.Card
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme.colors
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -41,8 +40,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import note.notes.savenote.Composable.Components.CustomTextField
-import note.notes.savenote.Composable.Components.TextFieldPlaceHolder
+import note.notes.savenote.Composable.Components.CustomTextField.CustomTextField
+import note.notes.savenote.Composable.Components.CustomTextField.TextFieldPlaceHolder
 import note.notes.savenote.R
 import note.notes.savenote.ViewModel.PrimaryViewModel
 import note.notes.savenote.ViewModel.model.PrimaryUiState
@@ -52,6 +51,7 @@ import note.notes.savenote.ui.theme.UniversalFamily
 @Composable
 fun TopNavigationBarHome(
     primaryViewModel: PrimaryViewModel,
+    primaryUiState: PrimaryUiState,
     startedScrolling: Boolean,
     moreOptions: () -> Unit,
     startSearch:() -> Unit,
@@ -60,8 +60,6 @@ fun TopNavigationBarHome(
     focusRequester: FocusRequester,
     offset: IntOffset
 ) {
-
-    val primaryUiState by primaryViewModel.stateGetter.collectAsState()
 
     Card(
         modifier = Modifier
@@ -85,29 +83,22 @@ fun TopNavigationBarHome(
                     headerVisibility = !primaryUiState.showSearchBar
                 )
 
-                AnimatedVisibility(
-                    visible = primaryUiState.showSearchBar,
-                    enter = slideInHorizontally(tween(durationMillis = 100)),
-                    exit = fadeOut(tween(durationMillis = 0))
-                ) {
-                    SearchBar(
-                        primaryViewModel = primaryViewModel,
-                        primaryUiState = primaryUiState,
-                        endSearch = endSearch::invoke,
-                        focusRequester = focusRequester
-                    )
-                }
+                SearchBar(
+                    primaryViewModel = primaryViewModel,
+                    primaryUiState = primaryUiState,
+                    endSearch = endSearch::invoke,
+                    focusRequester = focusRequester
+                )
 
                 Row(
                     modifier = Modifier.wrapContentSize(Alignment.CenterEnd, true)
                 ) {
-                    if (!primaryUiState.showSearchBar) {
-                        NavigationButtons(
-                            modifier = Modifier.width(44.dp),
-                            moreOptions = startSearch::invoke,
-                            icon = R.drawable.search_lg,
-                        )
-                    }
+                    NavigationButtons(
+                        modifier = Modifier.width(44.dp),
+                        moreOptions = startSearch::invoke,
+                        icon = R.drawable.search_lg,
+                        buttonVisibility = !primaryUiState.showSearchBar
+                    )
 
                     Crossfade(
                         animationSpec = tween(300),
@@ -149,41 +140,48 @@ fun SearchBar(
     endSearch: () -> Unit,
     focusRequester: FocusRequester,
 ){
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        backgroundColor = colors.onBackground,
-        shape = RoundedCornerShape(15.dp),
-        elevation = 0.dp
+    AnimatedVisibility(
+        visible = primaryUiState.showSearchBar,
+        enter = slideInHorizontally(tween(durationMillis = 100)),
     ) {
-        Row(
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            NavigationButtons(
-                moreOptions = endSearch::invoke,
-                icon = R.drawable.x_close
-            )
-            CustomTextField(
-                modifier = Modifier
-                    .focusRequester(focusRequester)
-                    .padding(end = 10.dp)
-                    .fillMaxWidth(0.80f)
-                    .animateContentSize(tween(150)),
-                value = primaryUiState.searchQuery,
-                searchIsActive = primaryUiState.showSearchBar,
-                onValueChange = { primaryViewModel.processSearchRequest(it) },
-                decorationBox = {
-                    TextFieldPlaceHolder(
-                        showPlaceHolder = primaryUiState.searchQuery.isEmpty() ,
-                        text = R.string.SearchNotes,
-                        fontSize = 15.sp,
-                        colour = colors.onSurface
+        if(primaryUiState.showSearchBar){
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = colors.onBackground,
+                shape = RoundedCornerShape(15.dp),
+                elevation = 0.dp
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    NavigationButtons(
+                        moreOptions = endSearch::invoke,
+                        icon = R.drawable.x_close
                     )
-                },
-                singleLine = true,
-                fontSize = 15.sp,
-                textColour = colors.primaryVariant
-            )
+                    CustomTextField(
+                        modifier = Modifier
+                            .focusRequester(focusRequester)
+                            .padding(end = 10.dp)
+                            .fillMaxWidth(0.80f)
+                            .animateContentSize(tween(150)),
+                        value = primaryUiState.searchQuery,
+                        searchIsActive = primaryUiState.showSearchBar,
+                        onValueChange = { primaryViewModel.processSearchRequest(it) },
+                        decorationBox = {
+                            TextFieldPlaceHolder(
+                                showPlaceHolder = primaryUiState.searchQuery.isEmpty(),
+                                text = R.string.SearchNotes,
+                                fontSize = 15.sp,
+                                colour = colors.onSurface
+                            )
+                        },
+                        singleLine = true,
+                        fontSize = 15.sp,
+                        textColour = colors.primaryVariant
+                    )
+                }
+            }
         }
     }
 }
@@ -260,19 +258,22 @@ fun NavigationButtons(
     moreOptions: () -> Unit,
     optionsColourEnabled: Color = colors.primary,
     optionsColourDisabled: Color = colors.secondary,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    buttonVisibility: Boolean = true
 ){
     val buttonColour = if(enabled) optionsColourEnabled else optionsColourDisabled
-    IconButton(
-        modifier = modifier.width(35.dp),
-        onClick = moreOptions::invoke,
-        enabled = enabled
-    ) {
-        Icon(
-            modifier = Modifier.size(22.dp + iconScale),
-            painter = painterResource(id = icon),
-            contentDescription = stringResource(R.string.DeleteNote),
-            tint = buttonColour
-        )
+    if(buttonVisibility){
+        IconButton(
+            modifier = modifier.width(35.dp),
+            onClick = moreOptions::invoke,
+            enabled = enabled
+        ) {
+            Icon(
+                modifier = Modifier.size(22.dp + iconScale),
+                painter = painterResource(id = icon),
+                contentDescription = stringResource(R.string.DeleteNote),
+                tint = buttonColour
+            )
+        }
     }
 }

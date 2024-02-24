@@ -108,16 +108,6 @@ fun AllNotesView(
     val focusRequester = remember { FocusRequester() }
     val context = LocalContext.current
 
-    BackHandler(
-        onBack = {
-            primaryViewModel.endSearch(focusManager)
-            keyboardController?.hide()
-            primaryViewModel.dropDown(false)
-            primaryViewModel.newEntryButton()
-            primaryViewModel.backup(false)
-        }
-    )
-
     Scaffold(
         modifier = modifier.fillMaxSize(),
         scaffoldState = scaffoldState,
@@ -138,6 +128,7 @@ fun AllNotesView(
             TopNavigationBarHome(
                 startedScrolling = allNotesObserver.value,
                 primaryViewModel = primaryViewModel,
+                primaryUiState = primaryUiState,
                 focusRequester = focusRequester,
                 startSearch = { primaryViewModel.startSearch(focusRequester) },
                 endSearch = { primaryViewModel.endSearch(focusManager) },
@@ -166,7 +157,7 @@ fun AllNotesView(
                 cancel = { primaryViewModel.confirmDelete(false) },
                 confirmDelete = { primaryViewModel.deleteSelected() },
                 confirmMessage = stringResource(
-                    id = R.string.ConfirmDelete,"${primaryViewModel.temporaryEntryHold.size}"
+                    id = R.string.ConfirmDelete,"${primaryUiState.temporaryEntryHold.size}"
                 )
             )
 
@@ -182,6 +173,7 @@ fun AllNotesView(
             )
         }
     ){ _ ->
+
         Crossfade(targetState = primaryUiState.showSearchBar, label = "") { currentView ->
             when(currentView) {
                 true -> {
@@ -201,12 +193,12 @@ fun AllNotesView(
                         verticalGridState = allNotesState,
                         primaryViewModel = primaryViewModel,
                         primaryUiState = primaryUiState,
+                        onEditClick = { onEditClick(it) },
                         nestedScrollConnection = customNestedScrollConnection(
                             toolbarOffsetHeightPx = toolbarOffsetHeightPx,
                             allNotesObserver = allNotesObserver,
                             allowAnimation = allowAnimation
-                        ),
-                        onEditClick = { onEditClick(it) }
+                        )
                     )
                 }
             }
@@ -245,9 +237,7 @@ fun AllEntriesView(
             end = 10.dp
         )
     ) {
-        item { 
-            Spacer(modifier = Modifier.height(0.dp))
-        }
+        item { Spacer(modifier = Modifier.height(0.dp)) }
 
         item(
             key = UUID.randomUUID(),
@@ -330,10 +320,13 @@ fun SearchView(
         }
     }
 
+    BackHandler { primaryViewModel.endSearch(focusManager) }
+
     Column{
         Spacer(modifier = Modifier.height(60.dp))
+
         Column{
-            ResultsFound(resultSize = primaryUiState.searchEntries.size)
+            ResultsFound(primaryUiState = primaryUiState)
             LazyVerticalStaggeredGrid(
                 modifier = Modifier
                     .animateContentSize()
@@ -380,6 +373,7 @@ fun EntryTemplate(
 
 ){
     val haptic = LocalHapticFeedback.current
+
     Column(modifier.animateContentSize(tween(500))){
         AnimatedContent(
             transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -402,76 +396,39 @@ fun EntryTemplate(
 
 @Composable
 fun ResultsFound(
-    resultSize: Int
-) {
-    Row(
-        modifier = Modifier
-            .height(50.dp)
-            .padding(horizontal = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            modifier = Modifier.size(18.dp),
-            tint = colors.secondaryVariant,
-            painter = painterResource(id = R.drawable.search_lg),
-            contentDescription = stringResource(R.string.Check),
-        )
-        Text(
-            text = "Results found ",
-            fontSize = 14.sp,
-            fontFamily = UniversalFamily,
-            color = colors.secondaryVariant,
-//            fontWeight = FontWeight.SemiBold
-        )
-
-        Text(
-            text = "$resultSize",
-            fontSize = 14.sp,
-            fontFamily = UniversalFamily,
-            color = colors.primary,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-fun NoResultsFound(
     primaryUiState: PrimaryUiState
 ) {
     AnimatedVisibility(
-        visible = primaryUiState.showSearchBar &&
-                  primaryUiState.searchEntries.isEmpty()&&
-                  primaryUiState.searchQuery.isNotEmpty(),
+        visible = primaryUiState.showSearchBar && primaryUiState.searchQuery.isNotEmpty(),
         enter = fadeIn(tween(200)),
         exit = fadeOut(tween(0))
-    ) {
-        Column(
+    ){
+        Row(
             modifier = Modifier
-                .padding(
-                    horizontal = 10.dp,
-                    vertical = 150.dp
-                )
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
+                .height(50.dp)
+                .padding(horizontal = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                tint = colors.onSecondary,
+                modifier = Modifier.size(14.dp),
+                tint = colors.secondaryVariant,
                 painter = painterResource(id = R.drawable.search_lg),
                 contentDescription = stringResource(R.string.Check),
-                modifier = Modifier
-                    .padding(top = 2.dp)
-                    .size(40.dp)
+            )
+            Text(
+                text = "Results found ",
+                fontSize = 14.sp,
+                fontFamily = UniversalFamily,
+                color = colors.secondaryVariant,
             )
 
-            Spacer(modifier = Modifier.height(15.dp))
-
             Text(
-                text = stringResource(id = R.string.NoMatches),
-                fontSize = 20.sp,
+                text = "${primaryUiState.searchEntries.size}",
+                fontSize = 14.sp,
                 fontFamily = UniversalFamily,
-                color = colors.onSecondary,
+                color = colors.primary,
+                fontWeight = FontWeight.Bold
             )
         }
     }

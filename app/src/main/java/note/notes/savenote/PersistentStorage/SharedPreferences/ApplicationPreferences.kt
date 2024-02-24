@@ -54,7 +54,7 @@ class ApplicationPreferences(private val context: Context): IApplicationPreferen
 
     override val getTheme: Flow<Int>
         get() = context.datastore.data.map {
-            preferences -> preferences[THEME] ?: 0
+            preferences -> preferences[THEME] ?: 1
         }
 
 

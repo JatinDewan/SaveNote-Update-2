@@ -1,5 +1,9 @@
 package note.notes.savenote.Composable.Components.Templates
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -15,10 +19,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 fun OptionMenuContainer(
     modifier: Modifier = Modifier,
     dismiss: Boolean,
-    menu: @Composable () -> Unit,
+    showContent: Boolean = true,
     expandedIsFalse:() -> Unit,
     additionalDismissFunction:() -> Unit = { /*TODO()*/ },
-    contentAlignment: Alignment = Alignment.TopEnd
+    contentAlignment: Alignment = Alignment.TopEnd,
+    menu: @Composable () -> Unit
 ){
     BoxWithConstraints {
         if (dismiss){
@@ -32,7 +37,15 @@ fun OptionMenuContainer(
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = contentAlignment,
-            content = { menu() }
+            content = {
+                AnimatedVisibility(
+                    visible = showContent,
+                    enter = fadeIn(tween(200)),
+                    exit = fadeOut(tween(200))
+                ) {
+                    menu()
+                }
+            }
         )
     }
 }

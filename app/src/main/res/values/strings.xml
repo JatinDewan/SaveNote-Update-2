@@ -2,7 +2,6 @@
     <string name="AppName">SaveNote</string>
     <string name="DeleteSelected">Delete Selected?</string>
     <string name="SearchNotes">Search Notes</string>
-    <string name="BackButton">Back Button</string>
     <string name="DeleteNote">Delete Note</string>
     <string name="Title">Add Title</string>
     <string name="Note">Note</string>
@@ -42,7 +41,6 @@
     <string name="BackupStep3">Once you have selected the location, save the backup file. If you plan on using the backup file later, make sure to remember where you saved it.</string>
     <string name="BackupStep4">If you do not have a secure location to store the backup file, it\'s recommended to delete the file once you are done with the restore process.</string>
     <string name="RestoreNoteHeader">Restoring Your Notes:</string>
-    <string name="NoMatches">No matches found</string>
     <string name="TapToConfirm">Tap to confirm</string>
     <string name="RestoreStep1">Click on the restore button when you are ready to restore your notes. This will prompt you to select the backup file that you previously saved.</string>
     <string name="RestoreStep2">Browse to the location where you saved the backup file and select it. If there are no error messages, this means that you have selected the correct backup file.</string>

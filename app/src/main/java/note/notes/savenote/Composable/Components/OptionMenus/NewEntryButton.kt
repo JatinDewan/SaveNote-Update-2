@@ -40,49 +40,48 @@ fun NewEntryButton (
         modifier = Modifier.padding(20.dp),
         contentAlignment = Alignment.BottomEnd,
         dismiss = dismiss,
-        expandedIsFalse = collapse::invoke,
-        menu = {
-            if(hideButton){
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    ButtonEntries(
-                        buttonFunction = navigateNewChecklist::invoke,
-                        entryLabel = R.string.ListOnly,
-                        entryIcon = R.drawable.dotpoints_01,
-                        dismiss = dismiss,
-                        animationDelay = 200,
-                        textColour = colors.background,
-                        padding = 9.dp
+        expandedIsFalse = collapse::invoke
+    ) {
+        if(hideButton){
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                ButtonEntries(
+                    buttonFunction = navigateNewChecklist::invoke,
+                    entryLabel = R.string.ListOnly,
+                    entryIcon = R.drawable.dotpoints_01,
+                    dismiss = dismiss,
+                    animationDelay = 200,
+                    textColour = colors.background,
+                    padding = 9.dp
 
-                    )
+                )
 
-                    ButtonEntries(
-                        buttonFunction = navigateNewNote::invoke,
-                        entryLabel = R.string.Note,
-                        entryIcon = R.drawable.pencil_01,
-                        dismiss = dismiss,
-                        animationDelay = 100,
-                        textColour = colors.background,
-                        padding = 9.dp
-                    )
+                ButtonEntries(
+                    buttonFunction = navigateNewNote::invoke,
+                    entryLabel = R.string.Note,
+                    entryIcon = R.drawable.pencil_01,
+                    dismiss = dismiss,
+                    animationDelay = 100,
+                    textColour = colors.background,
+                    padding = 9.dp
+                )
 
-                    RotatingNewEntryIcon(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .size(60.dp)
-                            .padding(10.dp),
-                        icon = R.drawable.plus,
-                        boolean = dismiss,
-                        dismiss = dismiss,
-                        expand = expand::invoke,
-                        collapse = collapse::invoke
-                    )
-                }
+                RotatingNewEntryIcon(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .size(60.dp)
+                        .padding(10.dp),
+                    icon = R.drawable.plus,
+                    boolean = dismiss,
+                    dismiss = dismiss,
+                    expand = expand::invoke,
+                    collapse = collapse::invoke
+                )
             }
         }
-    )
+    }
 }
 
 @OptIn(ExperimentalMaterialApi::class)

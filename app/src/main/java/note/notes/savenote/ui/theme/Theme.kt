@@ -54,16 +54,16 @@ private val LegacyColorPalette = legacyColors(
 )
 
 private val DarkColorPalette = darkColors(
-    background = Background,
-    secondary = Secondary,
-    primary = Primary,
-    primaryVariant = PrimaryVariant,
-    surface = Surface,
-    onSurface = OnSurface,
-    onSecondary = OnSecondary,
-    onError = onError,
-    onBackground = OnBackground,
-    secondaryVariant = SecondaryVariant
+    background = DarkBackground,
+    secondary = DarkSecondary,
+    primary = DarkPrimary,
+    primaryVariant = DarkPrimaryVariant,
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
+    onSecondary = DarkOnSecondary,
+    onError = DarkOnError,
+    onBackground = DarkOnBackground,
+    secondaryVariant = DarkSecondaryVariant
 )
 
 private val LightColorPalette = lightColors(

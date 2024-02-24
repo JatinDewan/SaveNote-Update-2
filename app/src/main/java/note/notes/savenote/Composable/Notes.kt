@@ -34,8 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import note.notes.savenote.Composable.Components.AppBars.NotesAndChecklistNavigationBar
-import note.notes.savenote.Composable.Components.CustomTextField
-import note.notes.savenote.Composable.Components.TextFieldPlaceHolder
+import note.notes.savenote.Composable.Components.CustomTextField.CustomTextField
+import note.notes.savenote.Composable.Components.CustomTextField.TextFieldPlaceHolder
 import note.notes.savenote.R
 import note.notes.savenote.Utils.Keyboard
 import note.notes.savenote.Utils.keyboardAsState

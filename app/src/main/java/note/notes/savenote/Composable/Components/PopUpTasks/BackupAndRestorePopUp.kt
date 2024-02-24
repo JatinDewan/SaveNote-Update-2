@@ -11,13 +11,10 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -45,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import note.notes.savenote.Composable.Components.Templates.OptionMenuContainer
 import note.notes.savenote.R
 import note.notes.savenote.ViewModel.PrimaryViewModel
 
@@ -55,7 +53,6 @@ fun BackupAndRestore(
     dismiss:() -> Unit
 ){
     var showMore by remember { mutableStateOf(false) }
-    val interactionSource = MutableInteractionSource()
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val createBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
@@ -65,79 +62,62 @@ fun BackupAndRestore(
             uri -> primaryViewModel.restoreNotes(uri,context)
     }
 
-    AnimatedVisibility(
-        visible = isVisible,
-        enter = fadeIn(tween(200)),
-        exit = fadeOut(tween(200))
-    ){
-        Box(
-            modifier = Modifier
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = { dismiss() }
-                )
-                .fillMaxSize()
-                .background(MaterialTheme.colors.background.copy(0.9f)),
-            contentAlignment = Alignment.Center
+    OptionMenuContainer(
+        dismiss = isVisible,
+        contentAlignment = Alignment.Center,
+        showContent = isVisible,
+        expandedIsFalse = { dismiss() }
+    ) {
+        Card(
+            backgroundColor = MaterialTheme.colors.secondary,
+            shape = RoundedCornerShape(15.dp),
+            modifier = Modifier.fillMaxWidth(0.9f),
         ) {
-            Card(
-                backgroundColor = MaterialTheme.colors.secondary,
-                shape = RoundedCornerShape(15.dp),
-                modifier = Modifier.fillMaxWidth(0.9f),
-                border = BorderStroke(1.dp, MaterialTheme.colors.onBackground)
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalAlignment = Alignment.Start
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    horizontalAlignment = Alignment.Start
+                InstructionsHeader()
+
+                AnimatedVisibility(
+                    visible = showMore,
+                    enter = expandVertically(tween(100)) + fadeIn(tween(100)),
+                    exit = shrinkVertically(tween(100)) + fadeOut(tween(100))
                 ) {
-                    InstructionsHeader()
+                    Column(
+                        modifier = Modifier
+                            .height(260.dp)
+                            .verticalScroll(scrollState)
+                            .background(
+                                MaterialTheme.colors.onBackground,
+                                RoundedCornerShape(10.dp)
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ){
+                        BackUpNotesInstructions()
 
-                    AnimatedVisibility(
-                        visible = showMore,
-                        enter = expandVertically(tween(100)) + fadeIn(tween(100)),
-                        exit = shrinkVertically(tween(100)) + fadeOut(tween(100))
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .height(260.dp)
-                                .verticalScroll(scrollState)
-                                .background(
-                                    MaterialTheme.colors.onBackground,
-                                    RoundedCornerShape(10.dp)
-                                )
-                        ){
-                            Column(
-                                modifier = Modifier.padding(7.dp),
-                                verticalArrangement = Arrangement.spacedBy(20.dp)
-                            ){
-                                BackUpNotesInstructions()
-
-                                RestoreNotesInstructions()
-                            }
-                        }
+                        RestoreNotesInstructions()
                     }
-
-                    Text(
-                        modifier = Modifier.clickable { showMore = !showMore },
-                        text = if (showMore)
-                            stringResource(id = R.string.ShowLess) else
-                            stringResource(id = R.string.ShowMore),
-                        color = MaterialTheme.colors.onSurface,
-                        fontSize = 16.sp
-                    )
-
-                    BackupAndRestoreOptions(
-                        backUp = { createBackup.launch("SaveNote_DB") },
-                        restore = { restoreBackup.launch(arrayOf("text/plain")) }
-                    )
                 }
+
+                Text(
+                    modifier = Modifier.clickable { showMore = !showMore },
+                    text = if (showMore)
+                        stringResource(id = R.string.ShowLess) else
+                        stringResource(id = R.string.ShowMore),
+                    color = MaterialTheme.colors.onSurface,
+                    fontSize = 16.sp
+                )
+
+                BackupAndRestoreOptions(
+                    backUp = { createBackup.launch("SaveNote_DB") },
+                    restore = { restoreBackup.launch(arrayOf("text/plain")) }
+                )
             }
         }
     }
 }
-
 
 @Composable
 fun InstructionsHeader(){
@@ -169,6 +149,7 @@ fun InstructionsHeader(){
 @Composable
 fun BackUpNotesInstructions(){
     Column(
+        modifier = Modifier.padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ){
         Text(
@@ -202,6 +183,7 @@ fun BackUpNotesInstructions(){
 @Composable
 fun RestoreNotesInstructions(){
     Column(
+        modifier = Modifier.padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ){
         Text(
@@ -237,7 +219,6 @@ fun RestoreNotesInstructions(){
     }
 }
 
-
 @Composable
 fun InstructionSteps(
     instructionNumber: Int,
@@ -251,7 +232,9 @@ fun InstructionSteps(
             color = MaterialTheme.colors.primaryVariant,
             fontSize = 14.sp
         )
+
         Spacer(modifier = Modifier.width(5.dp))
+
         Text(
             text = stringResource(id = instructionInformation),
             color = MaterialTheme.colors.primaryVariant,
@@ -314,6 +297,7 @@ fun BackupAndRestoreButton(
                 contentDescription = stringResource(id = text),
                 tint = MaterialTheme.colors.primary
             )
+
             Text(
                 text = stringResource(id = text),
                 color = MaterialTheme.colors.primaryVariant,

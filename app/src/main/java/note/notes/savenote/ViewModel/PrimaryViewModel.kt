@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
@@ -52,21 +51,20 @@ class PrimaryViewModel(
 
     private val stateSetter = MutableStateFlow(PrimaryUiState())
     val stateGetter: StateFlow<PrimaryUiState> = stateSetter.asStateFlow()
-    val temporaryEntryHold = mutableStateListOf<Note>()
     var isReady = false
 
-    init {
-        applicationStartProcess()
-    }
+    init { applicationStartProcess() }
 
     private fun currentDateAndTime(): String = dateUtils.getCurrentDateAndTime()
 
     fun help(context: Context) = getHelp.getHelp(context)
 
+    fun backup(showBackup: Boolean) = dropDown(false).invokeOnCompletion { showBackup(showBackup) }
+
     fun deleteNote(uid:Int) = viewModelScope.launch(Dispatchers.IO){ notesRepositoryImp.deleteNote(uid) }
 
     fun noteSelector(note: Note) = viewModelScope.launch {
-        if (note !in temporaryEntryHold ) temporaryEntryHold.add(note) else temporaryEntryHold.remove(note)
+        if (note !in stateSetter.value.temporaryEntryHold) stateSetter.value.temporaryEntryHold.add(note) else stateSetter.value.temporaryEntryHold.remove(note)
     }
 
     private fun showSearchBar(showSearchBar: Boolean) = viewModelScope.launch {
@@ -102,11 +100,14 @@ class PrimaryViewModel(
         navigateEntry:() -> Unit,
         note: Note
     ) {
-        if (temporaryEntryHold.isEmpty()) navigateEntry() else noteSelector(note)
+        if (stateSetter.value.temporaryEntryHold.isEmpty()) navigateEntry() else noteSelector(note)
     }
 
-    fun backup(showBackup: Boolean){
-        dropDown(false).invokeOnCompletion { showBackup(showBackup) }
+    fun deleteSelected() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO){ notesRepositoryImp.deleteSelected(stateSetter.value.temporaryEntryHold) }
+            stateSetter.value.temporaryEntryHold.clear()
+        }
     }
 
     fun dateAndTimeDisplay(dateAndTime: String, note: Note): String {
@@ -193,19 +194,19 @@ class PrimaryViewModel(
     fun selectAllNotes() {
         val allNotes = stateGetter.value.allEntries + stateGetter.value.favoriteEntries
         viewModelScope.launch {
-            if(temporaryEntryHold.size < allNotes.size) {
-                temporaryEntryHold.addAll(
-                    allNotes.filter { note -> note !in temporaryEntryHold }
+            if(stateSetter.value.temporaryEntryHold.size < allNotes.size) {
+                stateSetter.value.temporaryEntryHold.addAll(
+                    allNotes.filter { note -> note !in stateSetter.value.temporaryEntryHold }
                 )
             } else {
-                temporaryEntryHold.clear()
+                stateSetter.value.temporaryEntryHold.clear()
             }
         }
     }
 
     fun duplicateSelectedNotes() {
         viewModelScope.launch{
-            val newList = temporaryEntryHold.map { note ->
+            val newList = stateSetter.value.temporaryEntryHold.map { note ->
                 Note(
                     header = note.header,
                     note = note.note,
@@ -215,14 +216,7 @@ class PrimaryViewModel(
                 )
             }
             withContext(Dispatchers.IO){ notesRepositoryImp.insertAll(newList) }
-            temporaryEntryHold.clear()
-        }
-    }
-
-    fun deleteSelected() {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO){ notesRepositoryImp.deleteSelected(temporaryEntryHold) }
-            temporaryEntryHold.clear()
+            stateSetter.value.temporaryEntryHold.clear()
         }
     }
 
@@ -262,7 +256,7 @@ class PrimaryViewModel(
                 }
             )
             applicationPreferences.getSortByView.collect { getSortBy ->
-                withContext(Dispatchers.Default){
+                withContext(Dispatchers.Default) {
                     stateSetter.update { updateState ->
                         updateState.copy(
                             sortByView = getSortBy,
@@ -286,14 +280,12 @@ class PrimaryViewModel(
     fun favouriteSelected() {
         val category = "favourite"
         viewModelScope.launch {
-            temporaryEntryHold.map { note ->
+            stateSetter.value.temporaryEntryHold.map { note ->
                 val updatedNotes = note.copy(category = if (note.category == category) null else category)
 
-                withContext(Dispatchers.IO) {
-                    notesRepositoryImp.editNote(updatedNotes)
-                }
+                withContext(Dispatchers.IO) { notesRepositoryImp.editNote(updatedNotes) }
             }
-        }.invokeOnCompletion { temporaryEntryHold.clear() }
+        }.invokeOnCompletion { stateSetter.value.temporaryEntryHold .clear() }
     }
 
     private fun listComparatorArrangement(comparator: Int): Comparator<Note> {
@@ -376,7 +368,7 @@ class PrimaryViewModel(
                 )
             }
 
-            viewModelScope.launch(Dispatchers.Default) {
+            viewModelScope.launch {
                 loadingScreen(true).join()
                 showBackup(false).join()
                 restore.join()

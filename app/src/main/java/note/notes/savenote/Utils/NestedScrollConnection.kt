@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -30,12 +31,14 @@ fun customNestedScrollConnection(
     allowAnimation: MutableState<Boolean>
 ):NestedScrollConnection {
     val toolbarHeightPx = with(LocalDensity.current) { 60.dp.roundToPx().toFloat() }
+    val derivedObserver = remember{ derivedStateOf { allNotesObserver.value } }
+    val toolBarOffsetObserver = remember { derivedStateOf { toolbarOffsetHeightPx.floatValue } }
     return  remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val delta = available.y
                 val newOffset = toolbarOffsetHeightPx.floatValue + delta
-                if(allNotesObserver.value) toolbarOffsetHeightPx.floatValue = newOffset.coerceIn(-toolbarHeightPx, 0f)
+                if(derivedObserver.value) toolbarOffsetHeightPx.floatValue = newOffset.coerceIn(-toolbarHeightPx, 0f)
                 return Offset.Zero
             }
 
@@ -49,7 +52,7 @@ fun customNestedScrollConnection(
             }
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                toolbarOffsetHeightPx.floatValue = if(toolbarOffsetHeightPx.floatValue  >= -82.5 || !allNotesObserver.value) 0f else -165f
+                toolbarOffsetHeightPx.floatValue = if(toolBarOffsetObserver.value  >= -82.5 || !derivedObserver.value) 0f else -165f
                 allowAnimation.value = false
                 return super.onPostFling(consumed, available)
             }

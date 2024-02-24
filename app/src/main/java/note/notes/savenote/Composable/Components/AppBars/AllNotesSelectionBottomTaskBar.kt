@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,16 +47,12 @@ import note.notes.savenote.ui.theme.UniversalFamily
 fun BottomPopUpBar(
     primaryViewModel: PrimaryViewModel,
 ) {
-    val primaryView by primaryViewModel.stateGetter.collectAsState()
+    val primaryUiState by primaryViewModel.stateGetter.collectAsState()
     val checkContains = remember {
-        derivedStateOf {
-            primaryViewModel.temporaryEntryHold.containsAll(
-                primaryView.allEntries + primaryView.favoriteEntries
-            )
-        }
+        derivedStateOf { primaryUiState.temporaryEntryHold.containsAll(primaryUiState.allEntries + primaryUiState.favoriteEntries) }
     }
     val showChecklistSize = remember {
-        derivedStateOf { if (primaryViewModel.temporaryEntryHold.size > 99) "99+" else primaryViewModel.temporaryEntryHold.size.toString() }
+        derivedStateOf { if (primaryUiState.temporaryEntryHold.size > 99) "99+" else primaryUiState.temporaryEntryHold.size.toString() }
     }
 
     Box(
@@ -65,9 +60,9 @@ fun BottomPopUpBar(
         contentAlignment = Alignment.BottomCenter
     ) {
         AnimatedVisibility(
-            visible = primaryViewModel.temporaryEntryHold.isNotEmpty(),
-            enter = slideInVertically(tween(200)) { fullHeight -> fullHeight } + fadeIn(tween(200)),
-            exit = slideOutVertically(tween(200)) { fullHeight -> fullHeight } + fadeOut(tween(200))
+            visible = primaryUiState.temporaryEntryHold.isNotEmpty(),
+            enter = slideInVertically(tween(300)) { fullHeight -> fullHeight } + fadeIn(tween(200)),
+            exit = slideOutVertically(tween(300)) { fullHeight -> fullHeight } + fadeOut(tween(200))
         ) {
             Column {
                 Divider(color = colors.onBackground)
@@ -85,7 +80,6 @@ fun BottomPopUpBar(
                         elevation = 0.dp,
                         shape = RoundedCornerShape(15),
                         backgroundColor = colors.onBackground,
-                        border = BorderStroke(1.dp, colors.onBackground)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(0.4f),
@@ -120,7 +114,6 @@ fun BottomPopUpBar(
                         shape = RoundedCornerShape(15),
                         elevation = 0.dp,
                         backgroundColor = colors.onBackground,
-                        border = BorderStroke(1.dp, colors.onBackground)
                     ) {
                         PopUpBarButtons(
                             onClick = { primaryViewModel.favouriteSelected() },

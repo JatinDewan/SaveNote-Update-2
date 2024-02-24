@@ -22,32 +22,18 @@ interface NotesRepository {
 
 class NotesRepositoryImp (private val notesDao: NoteDao) : NotesRepository {
 
-    override suspend fun getNote(): Flow<List<Note>> {
-        return notesDao.getAll()
-    }
+    override suspend fun getNote(): Flow<List<Note>> = notesDao.getAll()
 
-    override suspend fun insertNote(notes: Note) {
-        return notesDao.insert(notes)
-    }
+    override suspend fun insertNote(notes: Note) = notesDao.insert(notes)
 
-    override suspend fun deleteNote(uid: Int?) {
-        return notesDao.delete(uid)
-    }
+    override suspend fun deleteNote(uid: Int?) = notesDao.delete(uid)
 
-    override suspend fun editNote(notes: Note) {
-        return notesDao.editNote(notes)
-    }
+    override suspend fun editNote(notes: Note) = notesDao.editNote(notes)
 
-    override suspend fun updateCategory(category: String?, uid: Int?) {
-        return notesDao.updateCategory(category, uid)
-    }
+    override suspend fun updateCategory(category: String?, uid: Int?) = notesDao.updateCategory(category, uid)
 
-    override suspend fun deleteSelected(list: List<Note>) {
-        return notesDao.deleteItems(list)
-    }
+    override suspend fun deleteSelected(list: List<Note>) = notesDao.deleteItems(list)
 
-    override suspend fun insertAll(items: List<Note>) {
-        return notesDao.insertGroup(items)
-    }
+    override suspend fun insertAll(items: List<Note>) = notesDao.insertGroup(items)
 
 }

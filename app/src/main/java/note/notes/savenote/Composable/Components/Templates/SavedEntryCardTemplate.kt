@@ -52,8 +52,8 @@ fun EntryCards(
     isSearchQuery: Boolean = false,
     note: Note
 ) {
-    val selected = primaryViewModel.temporaryEntryHold.contains(note)
-    val primaryViewState by primaryViewModel.stateGetter.collectAsState()
+    val primaryUiState by primaryViewModel.stateGetter.collectAsState()
+    val selected = primaryUiState.temporaryEntryHold.contains(note)
 
     val backgroundColour: Color by animateColorAsState(
         targetValue = if(selected) colors.secondaryVariant else colors.secondary,
@@ -88,19 +88,19 @@ fun EntryCards(
             ) {
                 HeaderDisplay(
                     note = note,
-                    primaryViewModel = primaryViewState,
+                    primaryViewModel = primaryUiState,
                     isSearchQuery = isSearchQuery
                 )
 
                 when(note.checkList.isNullOrEmpty()) {
                     true -> NoteDisplay(
                         note = note,
-                        primaryViewModel = primaryViewState,
+                        primaryViewModel = primaryUiState,
                         isSearchQuery = isSearchQuery
                     )
                     else -> CheckListDisplay(
                         note = note,
-                        primaryViewModel = primaryViewState,
+                        primaryViewModel = primaryUiState,
                         isSearchQuery = isSearchQuery
                     )
                 }
